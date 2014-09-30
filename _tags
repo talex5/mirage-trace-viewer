@@ -1,0 +1,2 @@
+true: warn(A), strict_sequence, package(lwt,lwt.unix), syntax(camlp4o), package(lwt.syntax)
+true: package(ocamlgraph)
