@@ -2,41 +2,24 @@ let printf = Printf.printf
 
 open Lwt
 
-(* representation of a node -- must be hashable *)
-module Node = struct
-   type t = int
-   let compare = Pervasives.compare
-   let hash = Hashtbl.hash
-   let equal = (=)
-end
-
 let labels = Hashtbl.create 10
-
-(* representation of an edge -- must be comparable *)
-module Edge = struct
-   type t = string
-   let compare = Pervasives.compare
-   let equal = (=)
-   let default = ""
-end
-
-module G = Graph.Imperative.Digraph.ConcreteBidirectionalLabeled(Node)(Edge)
-
-let graph = G.create ()
-
-let note_create parent child : unit =
-  printf "%d creates %d\n" parent child;
-  G.add_edge graph parent child
-
-let note_input main input : unit =
-  printf "%d takes input from %d\n" main input;
-  G.add_edge graph input main
-
-let note_merge main input : unit =
-  printf "%d merges into %d\n" main input;
-  G.add_edge graph input main
+let now = ref 0
 
 let () =
+  let open Event in
+
+  let record op =
+    Event.record {time = float_of_int !now; op} in
+
+  let note_create parent child =
+    `creates (parent, child) |> record in
+
+  let note_input main input =
+    `notifies (input, main) |> record in
+
+  let note_merge main input =
+    `becomes (input, main) |> record in
+
   Lwt.tracer := { Lwt.
     note_create;
     note_input;
@@ -46,7 +29,6 @@ let () =
 module Time_map = Map.Make(struct type t = int let compare = compare end)
 
 let events = ref Time_map.empty
-let now = ref 0
 let event = ref 0
 
 let block msg duration fn =
@@ -72,20 +54,6 @@ let main =
   read_block 1 >>= fun r ->
   send_tcp r
 
-(* module for creating dot-files *)
-module Dot = Graph.Graphviz.Dot(struct
-   include G (* use the graph module from above *)
-   let edge_attributes (_a, e, _b) = [`Label e; `Color 4711]
-   let default_edge_attributes _ = []
-   let get_subgraph _ = None
-   let vertex_attributes _ = [`Shape `Box]
-   let vertex_name v =
-     try Hashtbl.find labels v
-     with Not_found -> string_of_int v
-   let default_vertex_attributes _ = []
-  let graph_attributes _ = []
-end)
-
 let () =
   while not (Time_map.is_empty !events) do
     let time, fn = Time_map.min_binding !events in
@@ -95,6 +63,4 @@ let () =
     fn ()
   done;
 
-  let ch = open_out "graph.dot" in
-  Dot.output_graph ch graph;
-  close_out ch
+  Render.render (Simplify.simplify !Event.events) "graph.png"
