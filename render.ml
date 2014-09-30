@@ -3,7 +3,7 @@ type thread = {
   mutable y : float;
 }
 
-let x_of_time t = 20. +. t *. 200.
+let x_of_time t = 20. +. t *. 100.
 
 let arrow_width = 10.
 let arrow_height = 20.
@@ -15,7 +15,7 @@ let get_thread time tid =
   with Not_found ->
     let t = {
       x = x_of_time time;
-      y = float_of_int tid *. 80.;
+      y = 10.0 +. float_of_int tid *. 50.;
     } in
     Hashtbl.add threads tid t;
     t
@@ -42,7 +42,7 @@ let arrow cr time src recv =
   Cairo.line_to cr ~x:recv.x ~y:arrow_head_y
 
 let render events path =
-  let surface = Cairo.Image.(create RGB24 ~width:640 ~height:480) in
+  let surface = Cairo.Image.(create RGB24 ~width:900 ~height:600) in
   let cr = Cairo.create surface in
 
   Cairo.set_font_size cr 24.;

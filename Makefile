@@ -1,6 +1,6 @@
 all:
-	ocamlbuild -use-ocamlfind sim.native
-	./sim.native
+	ocamlbuild -cflag -g -use-ocamlfind sim.native
+	OCAMLRUNPARAM=b ./sim.native
 
 clean:
 	ocamlbuild -clean

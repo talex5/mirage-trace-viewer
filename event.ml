@@ -14,9 +14,9 @@ type 'a t = {
 
 let print_event t =
   match t.op with
-  | `creates (parent, child) -> printf "[%.0f] %d creates %d\n" t.time parent child
-  | `notifies (sender, recv) -> printf "[%.0f] %d notifies %d\n" t.time sender recv
-  | `becomes (old, replacement) -> printf "[%.0f] %d becomes %d\n" t.time old replacement
+  | `creates (parent, child) -> printf "[%.1f] %d creates %d\n" t.time parent child
+  | `notifies (sender, recv) -> printf "[%.1f] %d notifies %d\n" t.time sender recv
+  | `becomes (old, replacement) -> printf "[%.1f] %d becomes %d\n" t.time old replacement
 
 let events : op t list ref = ref []
 
