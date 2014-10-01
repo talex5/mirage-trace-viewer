@@ -15,7 +15,7 @@ let get_thread time tid =
   with Not_found ->
     let t = {
       x = x_of_time time;
-      y = 10.0 +. float_of_int tid *. 50.;
+      y = 10.0 +. float_of_int (tid : Lwt.thread_id :> int) *. 50.;
     } in
     Hashtbl.add threads tid t;
     t
@@ -26,7 +26,12 @@ let extend cr t time =
   t.x <- x_of_time time;
   Cairo.line_to cr ~x:t.x ~y:t.y
 
+let min_time = ref 0.0
+let stagger = 0.1
+
 let arrow cr time src recv =
+  let time = max !min_time time in
+  min_time := time +. stagger;
   let src = get_thread time src in
   let recv = get_thread time recv in
   extend cr src time;
@@ -56,7 +61,9 @@ let render events path =
     let open Event in
     match ev.op with
     | `creates (parent, child) -> arrow cr ev.time parent child
-    | `notifies (sender, recv) -> arrow cr ev.time sender recv
+    | `reads (a, b) -> arrow cr ev.time b a
+    | `resolves (a, b) -> arrow cr ev.time a b
+    | `becomes (a, b) -> arrow cr ev.time a b
   );
 
   Cairo.stroke cr;
