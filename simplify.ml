@@ -19,6 +19,13 @@ let rec replacement thread =
     r'
   with Not_found -> thread
 
+let rec shorten = function
+  | e1 :: e2 :: rest ->
+      begin match e1.Event.op, e2.Event.op with
+      | `creates (a, b), `becomes (a', b') when a = a' && b = b' -> e2 :: shorten rest
+      | _ -> e1 :: shorten (e2 :: rest) end
+  | x -> x
+
 let simplify evs =
   evs |> filter_map (fun ev ->
     let r = replacement in
@@ -47,3 +54,4 @@ let simplify evs =
         Hashtbl.add becomes a b;
         Some {ev with Event.op = `becomes (a, b)}
   )
+  |> shorten
