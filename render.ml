@@ -56,14 +56,13 @@ let arrow_width = 4.
 let arrow_height = 10.
 
 let thin   cr = Cairo.set_line_width cr 2.0
-let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:1.0 ~b:0.0
+let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
 let blue   cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.0 ~b:1.0
 let yellow cr = thin cr; Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:0.0
-let label  cr = Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
 
 let thread cr =
   Cairo.set_line_width cr 4.0;
-  Cairo.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8
+  Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
 let get_thread time tid =
   try Hashtbl.find Thread.threads tid
@@ -89,7 +88,7 @@ let arrow cr src src_time recv recv_time arrow_colour =
   let recv = get_thread recv_time recv in
 
   let src_y =
-    if (src.Thread.tid :> int) = 0 then recv.y +. 20. else src.Thread.y in
+    if (src.Thread.tid :> int) = 0 then recv.Thread.y +. 20. else src.Thread.y in
 
   arrow_colour cr;
   Cairo.move_to cr ~x:(x_of_time src_time) ~y:src_y;
@@ -113,6 +112,9 @@ let is_label ev =
 let render events path =
   let surface = Cairo.Image.(create RGB24 ~width:900 ~height:600) in
   let cr = Cairo.create surface in
+
+  Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
+  Cairo.paint cr;
 
   Cairo.set_font_size cr 20.;
   Cairo.select_font_face cr "Sans";
@@ -138,9 +140,6 @@ let render events path =
 
   thread cr;
   Thread.iter_threads (fun t ->
-    Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
-    Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
-
     Cairo.move_to cr ~x:(x_of_time t.Thread.start_time) ~y:t.Thread.y;
     Cairo.line_to cr ~x:(x_of_time t.Thread.end_time) ~y:t.Thread.y;
     Cairo.stroke cr;
@@ -160,11 +159,26 @@ let render events path =
         Printf.printf "%a becomes %a\n" Event.fmt a Event.fmt b;
         Printf.printf "b.y = %f\n" (get_thread time b).Thread.y;
         line cr time a b thread
+    | `label _ -> ()
+  );
+
+  thread cr;
+  Thread.iter_threads (fun t ->
+    Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
+    Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
+  );
+
+
+  events |> List.iter (fun ev ->
+    let time = ev.Event.time in
+    let open Event in
+    match ev.op with
     | `label (a, msg) ->
         let a = get_thread time a in
         thread cr;
         Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);
         Cairo.show_text cr msg
+    | _ -> ()
   );
 
   Cairo.PNG.write surface path
