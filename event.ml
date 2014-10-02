@@ -22,7 +22,7 @@ let print_event t =
   | `reads (a, b) -> printf "[%.1f] %a reads %a\n" t.time fmt a fmt b
   | `resolves (a, b) -> printf "[%.1f] %a resolves %a\n" t.time fmt a fmt b
   | `becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
-  | `label (a, b) -> printf "[%.1f] %a: %s" t.time fmt a b
+  | `label (a, b) -> printf "[%.1f] %a: %s\n" t.time fmt a b
 
 let events : op t list ref = ref []
 

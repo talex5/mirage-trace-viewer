@@ -1,2 +1,2 @@
-true: warn(A-4), strict_sequence, package(lwt,lwt.unix)
+true: warn(A-4), strict_sequence, package(lwt,lwt.unix,extlib)
 true: package(cairo2)

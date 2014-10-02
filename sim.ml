@@ -10,7 +10,9 @@ let () =
   let open Event in
 
   let record op =
-    Event.record {time = !now; op} in
+    let time = !now in
+    now := !now +. 0.1;
+    Event.record {time; op} in
 
   let current_id = Lwt.current_id in
 
@@ -62,7 +64,7 @@ let main =
     sleep 1.0 >>= fun () ->
     read_block 1 >>= fun r ->
     send_tcp r in
-  let b = sleep 3.2 in
+  let b = sleep 3.4 in
   Lwt.join [a; b]
 
 let () =
