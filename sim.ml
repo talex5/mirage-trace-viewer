@@ -9,18 +9,23 @@ let toplevel = Lwt.current_id ()
 let () =
   let open Event in
 
+  let last_was_creates = ref false in
+
   let record op =
+    last_was_creates := begin match op with
+    | `creates _ -> true | _ -> false end;
     let time = !now in
-    now := !now +. 0.1;
     Event.record {time; op} in
 
   let current_id = Lwt.current_id in
 
   let note_created child =
+    if !last_was_creates then now := !now +. 0.1;
     `creates (current_id (), child) |> record in
 
   let note_read input =
-    `reads (current_id (), input) |> record in
+    `reads (current_id (), input) |> record;
+    now := !now +. 0.1 in
 
   let note_resolved p =
     `resolves (current_id (), p) |> record in

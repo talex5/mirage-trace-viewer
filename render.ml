@@ -58,7 +58,9 @@ let arrow_height = 10.
 let thin   cr = Cairo.set_line_width cr 2.0
 let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
 let blue   cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.0 ~b:1.0
-let yellow cr = thin cr; Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:0.0
+
+let thread_label cr =
+  Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
 
 let thread cr =
   Cairo.set_line_width cr 4.0;
@@ -150,7 +152,7 @@ let render events path =
     let open Event in
     if not (is_label ev) then min_time := time +. stagger;
     match ev.op with
-    | `creates (parent, child) -> line cr time parent child yellow
+    | `creates (parent, child) -> line cr time parent child thread
     | `reads (a, b) ->
         let end_time = (get_thread time b).Thread.end_time in
         arrow cr b end_time a time blue
@@ -162,12 +164,11 @@ let render events path =
     | `label _ -> ()
   );
 
-  thread cr;
+  thread_label cr;
   Thread.iter_threads (fun t ->
     Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
     Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
   );
-
 
   events |> List.iter (fun ev ->
     let time = ev.Event.time in
@@ -175,7 +176,7 @@ let render events path =
     match ev.op with
     | `label (a, msg) ->
         let a = get_thread time a in
-        thread cr;
+        thread_label cr;
         Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);
         Cairo.show_text cr msg
     | _ -> ()
