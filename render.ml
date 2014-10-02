@@ -12,6 +12,7 @@ let thin   cr = Cairo.set_line_width cr 2.0
 let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:1.0 ~b:0.0
 let blue   cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.0 ~b:1.0
 let yellow cr = thin cr; Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:0.0
+let label  cr = Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
 
 let thread cr =
   Cairo.set_line_width cr 4.0;
@@ -76,8 +77,8 @@ let render events path =
   let surface = Cairo.Image.(create RGB24 ~width:900 ~height:600) in
   let cr = Cairo.create surface in
 
-  Cairo.set_font_size cr 24.;
-  Cairo.select_font_face cr "Sans" ~weight:Cairo.Bold;
+  Cairo.set_font_size cr 20.;
+  Cairo.select_font_face cr "Sans";
 
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
@@ -92,6 +93,11 @@ let render events path =
     | `reads (a, b) -> arrow cr time b a blue
     | `resolves (a, b) -> arrow cr time a b green
     | `becomes (a, b) -> line cr time a b thread
+    | `label (a, msg) ->
+        let a = get_thread time a in
+        label cr;
+        Cairo.move_to cr ~x:(x_of_time time) ~y:(a.y -. 5.);
+        Cairo.show_text cr msg
   );
 
   Cairo.PNG.write surface path

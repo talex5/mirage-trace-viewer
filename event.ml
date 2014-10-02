@@ -6,7 +6,8 @@ type op =
   [ `creates of thread * thread
   | `reads of thread * thread
   | `resolves of thread * thread
-  | `becomes of thread * thread ]
+  | `becomes of thread * thread
+  | `label of thread * string]
 
 type 'a t = {
   time : float;
@@ -21,6 +22,7 @@ let print_event t =
   | `reads (a, b) -> printf "[%.1f] %a reads %a\n" t.time fmt a fmt b
   | `resolves (a, b) -> printf "[%.1f] %a resolves %a\n" t.time fmt a fmt b
   | `becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
+  | `label (a, b) -> printf "[%.1f] %a: %s" t.time fmt a b
 
 let events : op t list ref = ref []
 

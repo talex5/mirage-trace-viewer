@@ -41,6 +41,7 @@ let events = ref Time_map.empty
 let block msg duration fn =
   let t, w = wait () in
   printf "%a is %s\n" Event.fmt (Lwt.id_of_thread t) msg;
+  Event.(record {time = !now; op = `label (Lwt.id_of_thread t, msg)});
   Hashtbl.add labels (Lwt.id_of_thread t) msg;
   events := !events |> Time_map.add (!now +. duration) (fun () ->
     Lwt.wakeup w (fn ());
