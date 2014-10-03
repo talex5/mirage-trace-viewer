@@ -131,10 +131,11 @@ let arrow cr src src_time recv recv_time arrow_colour =
 
 let is_label ev =
   match ev.Event.op with
-  | `label _ -> true
+  | Event.Label _ -> true
   | _ -> false
 
 let render events path =
+  let open Event in
   let surface = Cairo.Image.(create RGB24 ~width:900 ~height:600) in
   let cr = Cairo.create surface in
 
@@ -149,16 +150,15 @@ let render events path =
   Cairo.set_line_join cr Cairo.JOIN_BEVEL;
 
   events |> List.iter (fun ev ->
-    let open Event in
     let time = ev.time in
     match ev.op with
-    | `creates (parent, child) ->
+    | Creates (parent, child) ->
         (* Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time; *)
         let p = get_thread time parent in
         Thread.create ~parent:p time child |> ignore
-    | `resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
-    | `becomes (a, _b) -> (get_thread time a).Thread.end_time <- time
-    | `label _ | `reads _ -> ()
+    | Resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
+    | Becomes (a, _b) -> (get_thread time a).Thread.end_time <- time
+    | Label _ | Reads _ -> ()
   );
 
   arrange ();
@@ -171,19 +171,18 @@ let render events path =
   );
 
   events |> List.iter (fun ev ->
-    let time = max !min_time ev.Event.time in
-    let open Event in
+    let time = max !min_time ev.time in
     if not (is_label ev) then min_time := time +. stagger;
     match ev.op with
-    | `creates (parent, child) -> line cr time parent child thread
-    | `reads (a, b) ->
+    | Creates (parent, child) -> line cr time parent child thread
+    | Reads (a, b) ->
         let end_time = (get_thread time b).Thread.end_time in
         arrow cr b end_time a time blue
-    | `resolves (a, b) -> arrow cr a time b time green
-    | `becomes (a, b) ->
-        Printf.printf "%a becomes %a\n" Event.fmt a Event.fmt b;
+    | Resolves (a, b) -> arrow cr a time b time green
+    | Becomes (a, b) ->
+        Printf.printf "%a becomes %a\n" fmt a fmt b;
         line cr time a b thread
-    | `label _ -> ()
+    | Label _ -> ()
   );
 
   thread_label cr;
@@ -193,10 +192,9 @@ let render events path =
   );
 
   events |> List.iter (fun ev ->
-    let time = ev.Event.time in
-    let open Event in
+    let time = ev.time in
     match ev.op with
-    | `label (a, msg) ->
+    | Label (a, msg) ->
         let a = get_thread time a in
         thread_label cr;
         Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);

@@ -3,11 +3,11 @@ let printf = Printf.printf
 type thread = Lwt.thread_id
 
 type op = 
-  [ `creates of thread * thread
-  | `reads of thread * thread
-  | `resolves of thread * thread
-  | `becomes of thread * thread
-  | `label of thread * string]
+  | Creates of thread * thread
+  | Reads of thread * thread
+  | Resolves of thread * thread
+  | Becomes of thread * thread
+  | Label of thread * string
 
 type 'a t = {
   time : float;
@@ -18,14 +18,14 @@ let fmt ch tid = Printf.fprintf ch "%d" (tid : thread :> int)
 
 let print_event t =
   match t.op with
-  | `creates (parent, child) -> printf "[%.1f] %a creates %a\n" t.time fmt parent fmt child
-  | `reads (a, b) -> printf "[%.1f] %a reads %a\n" t.time fmt a fmt b
-  | `resolves (a, b) -> printf "[%.1f] %a resolves %a\n" t.time fmt a fmt b
-  | `becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
-  | `label (a, b) -> printf "[%.1f] %a: %s\n" t.time fmt a b
+  | Creates (parent, child) -> printf "[%.1f] %a creates %a\n" t.time fmt parent fmt child
+  | Reads (a, b) -> printf "[%.1f] %a reads %a\n" t.time fmt a fmt b
+  | Resolves (a, b) -> printf "[%.1f] %a resolves %a\n" t.time fmt a fmt b
+  | Becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
+  | Label (a, b) -> printf "[%.1f] %a: %s\n" t.time fmt a b
 
-let events : op t list ref = ref []
+let event_log : op t list ref = ref []
 
 let record event =
-  events := event :: !events;
+  event_log := event :: !event_log;
   print_event event

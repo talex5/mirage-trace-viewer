@@ -13,7 +13,7 @@ let () =
 
   let record op =
     last_was_creates := begin match op with
-    | `creates _ -> true | _ -> false end;
+    | Creates _ -> true | _ -> false end;
     let time = !now in
     Event.record {time; op} in
 
@@ -21,18 +21,18 @@ let () =
 
   let note_created child =
 (*     if !last_was_creates then now := !now +. 0.1; *)
-    `creates (current_id (), child) |> record in
+    Creates (current_id (), child) |> record in
 
   let note_read input =
-    `reads (current_id (), input) |> record;
+    Reads (current_id (), input) |> record;
     now := !now +. 0.1 in
 
   let note_resolved p =
-    `resolves (current_id (), p) |> record in
+    Resolves (current_id (), p) |> record in
 
   let note_becomes input main =
     if main <> input then
-      `becomes (input, main) |> record in
+      Becomes (input, main) |> record in
 
   Lwt.tracer := { Lwt.
     note_created;
@@ -48,7 +48,7 @@ let events = ref Time_map.empty
 let block msg duration fn =
   let t, w = wait () in
   printf "%a is %s\n" Event.fmt (Lwt.id_of_thread t) msg;
-  Event.(record {time = !now; op = `label (Lwt.id_of_thread t, msg)});
+  Event.(record {time = !now; op = Label (Lwt.id_of_thread t, msg)});
   Hashtbl.add labels (Lwt.id_of_thread t) msg;
   events := !events |> Time_map.add (!now +. duration) (fun () ->
     Lwt.wakeup w (fn ());
@@ -80,7 +80,7 @@ let () =
     events := !events |> Time_map.remove time;
     fn ()
   done;
-  Event.(record {time = !now; op = `reads (toplevel, id_of_thread main)});
-  Event.(record {time = !now; op = `resolves (toplevel, toplevel)});
+  Event.(record {time = !now; op = Reads (toplevel, id_of_thread main)});
+  Event.(record {time = !now; op = Resolves (toplevel, toplevel)});
 
-  Render.render (Simplify.simplify (List.rev (!Event.events))) "graph.png"
+  Render.render (Simplify.simplify (List.rev (!Event.event_log))) "graph.png"

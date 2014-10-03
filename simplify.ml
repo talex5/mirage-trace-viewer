@@ -30,31 +30,32 @@ let rec shorten = function
 
 let simplify evs =
   evs |> filter_map (fun ev ->
+    let open Event in
     let r = replacement in
-    match ev.Event.op with
-    | `creates (parent, child) ->
+    match ev.op with
+    | Creates (parent, child) ->
         let a = r parent in
         let b = r child in
-        if a <> b then Some {ev with Event.op = `creates (a, b)}
+        if a <> b then Some {ev with Event.op = Creates (a, b)}
         else None
-    | `reads (a, b) ->
+    | Reads (a, b) ->
         let a = r a in
         let b = r b in
-        if a <> b then Some {ev with Event.op = `reads (a, b)}
+        if a <> b then Some {ev with Event.op = Reads (a, b)}
         else None
-    | `resolves (a, b) ->
+    | Resolves (a, b) ->
         let a = r a in
         let b = r b in
-        Some {ev with Event.op = `resolves (a, b)}
-    | `label (a, msg) ->
+        Some {ev with Event.op = Resolves (a, b)}
+    | Label (a, msg) ->
         let a = r a in
-        Some {ev with Event.op = `label (a, msg)}
-    | `becomes (a, b) ->
+        Some {ev with Event.op = Label (a, msg)}
+    | Becomes (a, b) ->
         let a = r a in
         let b = r b in
         let a, b =
           if a < b then a, b
           else b, a in
         Hashtbl.add becomes a b;
-        Some {ev with Event.op = `becomes (a, b)}
+        Some {ev with Event.op = Becomes (a, b)}
   )
