@@ -45,8 +45,7 @@ let simplify evs =
     | `resolves (a, b) ->
         let a = r a in
         let b = r b in
-        if a <> b then Some {ev with Event.op = `resolves (a, b)}
-        else None
+        Some {ev with Event.op = `resolves (a, b)}
     | `label (a, msg) ->
         let a = r a in
         Some {ev with Event.op = `label (a, msg)}

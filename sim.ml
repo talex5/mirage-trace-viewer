@@ -20,7 +20,7 @@ let () =
   let current_id = Lwt.current_id in
 
   let note_created child =
-    if !last_was_creates then now := !now +. 0.1;
+(*     if !last_was_creates then now := !now +. 0.1; *)
     `creates (current_id (), child) |> record in
 
   let note_read input =
@@ -81,5 +81,6 @@ let () =
     fn ()
   done;
   Event.(record {time = !now; op = `reads (toplevel, id_of_thread main)});
+  Event.(record {time = !now; op = `resolves (toplevel, toplevel)});
 
   Render.render (Simplify.simplify (List.rev (!Event.events))) "graph.png"

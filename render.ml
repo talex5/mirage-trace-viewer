@@ -6,6 +6,7 @@ module Thread = struct
     mutable y : float;
     mutable prev : t option;
     mutable next : t option;
+    mutable children' : t list;
   }
 
   let threads : (Event.thread, t) Hashtbl.t = Hashtbl.create 10
@@ -17,6 +18,7 @@ module Thread = struct
     y = 0.0;
     prev = None;
     next = None;
+    children' = [];
   }
 
   let create ~parent start_time tid =
@@ -24,11 +26,13 @@ module Thread = struct
       tid;
       start_time;
       end_time = 0.0;
-      y = float_of_int (tid : Lwt.thread_id :> int) *. 40.;
+      y = 0.0;
       prev = Some parent;
       next = parent.next;
+      children' = [];
     } in
     parent.next <- Some t;
+    parent.children' <- t :: parent.children';
     begin match t.next with
     | Some next -> next.prev <- Some t
     | None -> () end;
@@ -41,14 +45,33 @@ module Thread = struct
       | Some node -> f node; process node.next in
     process (top_thread.next)
 
-  let arrange () =
-    let y = ref 10.0 in
-    iter_threads (fun node ->
-      Printf.printf "setting %a.y = %f\n" Event.fmt node.tid !y;
-      node.y <- !y;
-      y := !y +. 40.0;
-    )
+  (* Sort by y first, so we can quickly find the lowest *)
+  let compare a b =
+    match compare a.y b.y with
+    | 0 -> compare a.tid b.tid
+    | r -> r
 end
+
+module IT = ITree.Make(Thread)
+
+let arrange () =
+  let open Thread in
+  let add_interval _tid t acc =
+    { Interval_tree.Interval.
+      lbound = t.start_time;
+      rbound = t.end_time;
+      value = t
+    } :: acc in
+  let intervals = Hashtbl.fold add_interval Thread.threads [] in
+  let layout = IT.create intervals in
+  let rec process t =
+    let overlaps = IT.overlapping_interval layout (t.start_time, t.end_time) in
+    let y =
+      try (IT.IntervalSet.max_elt overlaps).Interval_tree.Interval.value.y +. 40.
+      with Not_found -> 10. in
+    t.y <- y;
+    t.children' |> List.iter process in
+  top_thread.children' |> List.iter process
 
 let x_of_time t = 20. +. t *. 100.
 
@@ -130,7 +153,7 @@ let render events path =
     let time = ev.time in
     match ev.op with
     | `creates (parent, child) ->
-        Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time;
+        (* Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time; *)
         let p = get_thread time parent in
         Thread.create ~parent:p time child |> ignore
     | `resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
@@ -138,7 +161,7 @@ let render events path =
     | `label _ | `reads _ -> ()
   );
 
-  Thread.arrange ();
+  arrange ();
 
   thread cr;
   Thread.iter_threads (fun t ->
@@ -159,7 +182,6 @@ let render events path =
     | `resolves (a, b) -> arrow cr a time b time green
     | `becomes (a, b) ->
         Printf.printf "%a becomes %a\n" Event.fmt a Event.fmt b;
-        Printf.printf "b.y = %f\n" (get_thread time b).Thread.y;
         line cr time a b thread
     | `label _ -> ()
   );
