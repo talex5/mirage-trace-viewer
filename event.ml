@@ -1,6 +1,8 @@
+open Sexplib.Std
+
 let printf = Printf.printf
 
-type thread = Lwt.thread_id
+type thread = int with sexp
 
 type op = 
   | Creates of thread * thread
@@ -8,11 +10,12 @@ type op =
   | Resolves of thread * thread
   | Becomes of thread * thread
   | Label of thread * string
+  with sexp
 
-type 'a t = {
+type t = {
   time : float;
-  op : 'a;
-}
+  op : op;
+} with sexp
 
 let fmt ch tid = Printf.fprintf ch "%d" (tid : thread :> int)
 
@@ -24,7 +27,7 @@ let print_event t =
   | Becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
   | Label (a, b) -> printf "[%.1f] %a: %s\n" t.time fmt a b
 
-let event_log : op t list ref = ref []
+let event_log : t list ref = ref []
 
 let record event =
   event_log := event :: !event_log;

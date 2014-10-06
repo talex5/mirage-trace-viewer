@@ -1,6 +1,6 @@
 module Thread = struct
   type t = {
-    tid : Lwt.thread_id;
+    tid : Event.thread;
     start_time : float;
     mutable end_time : float;
     mutable y : float;
@@ -12,7 +12,7 @@ module Thread = struct
   let threads : (Event.thread, t) Hashtbl.t = Hashtbl.create 10
 
   let top_thread = {
-    tid = Lwt.current_id ();
+    tid = -1;
     start_time = 0.0;
     end_time = 0.0;
     y = 0.0;

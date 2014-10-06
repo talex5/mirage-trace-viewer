@@ -83,4 +83,8 @@ let () =
   Event.(record {time = !now; op = Reads (toplevel, id_of_thread main)});
   Event.(record {time = !now; op = Resolves (toplevel, toplevel)});
 
-  Render.render (Simplify.simplify (List.rev (!Event.event_log))) "graph.png"
+  let ch = open_out "log.sexp" in
+  List.rev !Event.event_log |> List.iter (fun ev ->
+    Sexplib.Sexp.output_mach ch (Event.sexp_of_t ev : Sexplib.Sexp.t)
+  );
+  close_out ch

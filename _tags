@@ -1,2 +1,3 @@
-true: warn(A-4), strict_sequence, package(lwt,lwt.unix,extlib,itv-tree)
+true: warn(A-4), strict_sequence, package(lwt,lwt.unix,extlib,itv-tree,sexplib)
+<event.*>: syntax(camlp4o), package(sexplib.syntax)
 true: package(cairo2)
