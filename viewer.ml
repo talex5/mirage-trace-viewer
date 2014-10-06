@@ -9,4 +9,4 @@ let () =
   close_in ch;
   let events = List.map Event.t_of_sexp events in
 
-  Render.render (Simplify.simplify events) "graph.png"
+  Render.render (Simplify.simplify events)

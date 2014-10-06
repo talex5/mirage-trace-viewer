@@ -1,3 +1,6 @@
+let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
+  ignore (signal ~callback)
+
 module Thread = struct
   type t = {
     tid : Event.thread;
@@ -74,7 +77,8 @@ let arrange () =
     t.children' |> List.iter process in
   top_thread.children' |> List.iter process
 
-let x_of_time t = 20. +. t *. 100.
+let trace_start_time = ref 0.0
+let x_of_time t = 20. +. (t -. !trace_start_time)  *. 1000.
 
 let arrow_width = 4.
 let arrow_height = 10.
@@ -96,9 +100,6 @@ let get_thread _time tid =
 
 let extend _cr _t _time =
   ()
-
-let min_time = ref 0.0
-let stagger = 0.0
 
 let line cr time src recv colour =
   let src = get_thread time src in
@@ -135,24 +136,18 @@ let is_label ev =
   | Event.Label _ -> true
   | _ -> false
 
-let render events path =
+let render events =
+  GMain.init () |> ignore;
+  let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
+  let area =
+    GMisc.drawing_area ~packing:win#add () in
+  win#show ();
   let open Event in
   let trace_end_time = (List.nth events (List.length events - 1)).time in
+  trace_start_time := (List.hd events).time;
 
   let width = (x_of_time trace_end_time |> truncate |> min 4096) + 10 in
   Printf.printf "width = %d\n" width;
-  let surface = Cairo.Image.(create RGB24 ~width ~height:800) in
-  let cr = Cairo.create surface in
-
-  Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
-  Cairo.paint cr;
-
-  Cairo.set_font_size cr 20.;
-  Cairo.select_font_face cr "Sans";
-
-  Cairo.set_line_width cr 2.0;
-  Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
-  Cairo.set_line_join cr Cairo.JOIN_BEVEL;
 
   events |> List.iter (fun ev ->
     let time = ev.time in
@@ -168,49 +163,65 @@ let render events path =
 
   arrange ();
 
-  thread cr;
-  Thread.iter_threads (fun t ->
-    Cairo.move_to cr ~x:(x_of_time t.Thread.start_time) ~y:t.Thread.y;
-    Cairo.line_to cr ~x:(x_of_time t.Thread.end_time) ~y:t.Thread.y;
-    Cairo.stroke cr;
+  area#event#connect#expose ==> (fun _ev ->
+    let cr = Cairo_gtk.create area#misc#window in
+
+    Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
+    Cairo.paint cr;
+
+    Cairo.set_font_size cr 20.;
+    Cairo.select_font_face cr "Sans";
+
+    Cairo.set_line_width cr 2.0;
+    Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
+    Cairo.set_line_join cr Cairo.JOIN_BEVEL;
+
+    thread cr;
+    Thread.iter_threads (fun t ->
+      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time) ~y:t.Thread.y;
+      Cairo.line_to cr ~x:(x_of_time t.Thread.end_time) ~y:t.Thread.y;
+      Cairo.stroke cr;
+    );
+
+    events |> List.iter (fun ev ->
+      let time = ev.time in
+      match ev.op with
+      | Creates (parent, child) -> line cr time parent child thread
+      | Reads (a, b) ->
+          let end_time = (get_thread time b).Thread.end_time in
+          thin cr;
+          let alpha = 1.0 -. (min 1.0 ((x_of_time time -. x_of_time end_time) /. 6000.)) in
+          Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
+          arrow cr b end_time a time
+      | Resolves (a, b) ->
+          if a <> -1 then
+            green cr;
+            arrow cr a time b time
+      | Becomes (a, b) ->
+          line cr time a b thread
+      | Label _ -> ()
+    );
+
+    thread_label cr;
+    Thread.iter_threads (fun t ->
+      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
+      Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
+    );
+
+    events |> List.iter (fun ev ->
+      let time = ev.time in
+      match ev.op with
+      | Label (a, msg) ->
+          let a = get_thread time a in
+          thread_label cr;
+          Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);
+          Cairo.show_text cr msg
+      | _ -> ()
+    );
+
+    true
   );
 
-  events |> List.iter (fun ev ->
-    let time = max !min_time ev.time in
-    if not (is_label ev) then min_time := time +. stagger;
-    match ev.op with
-    | Creates (parent, child) -> line cr time parent child thread
-    | Reads (a, b) ->
-        let end_time = (get_thread time b).Thread.end_time in
-        thin cr;
-        let alpha = 1.0 -. (min 1.0 ((x_of_time time -. x_of_time end_time) /. 6000.)) in
-        Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
-        arrow cr b end_time a time
-    | Resolves (a, b) ->
-        if a <> -1 then
-          green cr;
-          arrow cr a time b time
-    | Becomes (a, b) ->
-        Printf.printf "%a becomes %a\n" fmt a fmt b;
-        line cr time a b thread
-    | Label _ -> ()
-  );
+  win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
 
-  thread_label cr;
-  Thread.iter_threads (fun t ->
-    Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
-    Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
-  );
-
-  events |> List.iter (fun ev ->
-    let time = ev.time in
-    match ev.op with
-    | Label (a, msg) ->
-        let a = get_thread time a in
-        thread_label cr;
-        Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);
-        Cairo.show_text cr msg
-    | _ -> ()
-  );
-
-  Cairo.PNG.write surface path
+  GMain.Main.main ()
