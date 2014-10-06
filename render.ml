@@ -58,6 +58,7 @@ end
 module IT = ITree.Make(Thread)
 
 let arrange () =
+  let max_y = ref 0. in
   let open Thread in
   let add_interval _tid t acc =
     assert (t.end_time >= t.start_time);
@@ -74,11 +75,15 @@ let arrange () =
       try (IT.IntervalSet.max_elt overlaps).Interval_tree.Interval.value.y +. 30.
       with Not_found -> 10. in
     t.y <- y;
+    max_y := max !max_y y;
     t.children' |> List.iter process in
-  top_thread.children' |> List.iter process
+  top_thread.children' |> List.iter process;
+  !max_y
 
+let scale = ref 1000.
 let trace_start_time = ref 0.0
-let x_of_time t = 20. +. (t -. !trace_start_time)  *. 1000.
+let x_of_time t = 20. +. (t -. !trace_start_time)  *. !scale
+let time_of_x x = ((x -. 20.) /. !scale) +. !trace_start_time
 
 let arrow_width = 4.
 let arrow_height = 10.
@@ -139,15 +144,12 @@ let is_label ev =
 let render events =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
-  let area =
-    GMisc.drawing_area ~packing:win#add () in
+  let swin = GBin.scrolled_window ~packing:win#add () in
+  let area = GMisc.drawing_area ~packing:swin#add_with_viewport () in
   win#show ();
   let open Event in
   let trace_end_time = (List.nth events (List.length events - 1)).time in
   trace_start_time := (List.hd events).time;
-
-  let width = (x_of_time trace_end_time |> truncate |> min 4096) + 10 in
-  Printf.printf "width = %d\n" width;
 
   events |> List.iter (fun ev ->
     let time = ev.time in
@@ -161,7 +163,8 @@ let render events =
     | Label _ | Reads _ -> ()
   );
 
-  arrange ();
+  let max_y = arrange () in
+  area#misc#set_size_request ~width:(x_of_time trace_end_time |> truncate) ~height:(max_y +. 20. |> truncate) ();
 
   area#event#connect#expose ==> (fun _ev ->
     let cr = Cairo_gtk.create area#misc#window in
@@ -223,5 +226,23 @@ let render events =
   );
 
   win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
+
+  area#misc#set_app_paintable true;
+  area#event#add [`SCROLL];
+  area#event#connect#scroll ==> (fun ev ->
+    let x = GdkEvent.Scroll.x ev in
+    let t_at_pointer = time_of_x x in
+    let redraw () =
+      let x_at_pointer = x_of_time t_at_pointer in
+      let hadj = swin#hadjustment in
+      GtkBase.Widget.queue_draw area#as_widget;
+      area#misc#set_size_request ~width:(x_of_time trace_end_time |> truncate) ();
+      hadj#set_value (hadj#value +. (x_at_pointer -. x)) in
+    begin match GdkEvent.Scroll.direction ev with
+    | `UP -> scale := !scale *. 1.2; redraw ()
+    | `DOWN -> scale := !scale /. 1.2; redraw ()
+    | _ -> () end;
+    true
+  );
 
   GMain.Main.main ()
