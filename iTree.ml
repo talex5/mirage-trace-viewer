@@ -56,15 +56,15 @@ module Make(Value : Set.OrderedType) = struct
 
   (* Extend [acc] with intervals from the sorted array [intervals] where
    * [key interval] is in the given range. *)
-  let add_range intervals (key : Interval.t -> float) (lbound, rbound) acc =
+  let add_range intervals (key : Interval.t -> float) test acc =
     let l = Array.length intervals in
-    let first = intervals |> count_before (fun i2 -> key i2 >= lbound) in
+    let first = intervals |> count_before (fun i2 -> test (key i2)) in
     let rec collect acc i =
       if i = l then acc
       else (
         let i2 = intervals.(i) in
-        if key i2 > rbound then acc
-        else collect (IntervalSet.add i2 acc) (i + 1)
+        if test (key i2) then collect (IntervalSet.add i2 acc) (i + 1)
+        else acc
       ) in
     collect acc first
 
@@ -78,10 +78,15 @@ module Make(Value : Set.OrderedType) = struct
      * This will also include intervals that end inside the interval, but we want those anyway. *)
     let straddling_start =
       Interval_tree.query t.by_point lbound
-      |> List.fold_left (fun acc i -> IntervalSet.add i acc) IntervalSet.empty in
+      |> List.fold_left (fun acc i ->
+          if i.Interval_tree.Interval.rbound > lbound then   (* (right bound is exclusive) *)
+            IntervalSet.add i acc
+          else
+            acc
+        ) IntervalSet.empty in
 
     let open Interval_tree.Interval in
     straddling_start
-    |> add_range t.by_start (fun i2 -> i2.lbound) (lbound, rbound)
-    |> add_range t.by_end   (fun i2 -> i2.rbound) (lbound, rbound)
+    |> add_range t.by_start (fun i2 -> i2.lbound) (fun x -> lbound <= x && x < rbound)
+    |> add_range t.by_end   (fun i2 -> i2.rbound) (fun x -> lbound < x && x <= rbound)
 end

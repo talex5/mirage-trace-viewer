@@ -21,11 +21,11 @@ module Thread = struct
     children' = [];
   }
 
-  let create ~parent start_time tid =
+  let create ~parent start_time end_time tid =
     let t = {
       tid;
       start_time;
-      end_time = 0.0;
+      end_time;
       y = 0.0;
       prev = Some parent;
       next = parent.next;
@@ -57,6 +57,7 @@ module IT = ITree.Make(Thread)
 let arrange () =
   let open Thread in
   let add_interval _tid t acc =
+    assert (t.end_time >= t.start_time);
     { Interval_tree.Interval.
       lbound = t.start_time;
       rbound = t.end_time;
@@ -67,7 +68,7 @@ let arrange () =
   let rec process t =
     let overlaps = IT.overlapping_interval layout (t.start_time, t.end_time) in
     let y =
-      try (IT.IntervalSet.max_elt overlaps).Interval_tree.Interval.value.y +. 40.
+      try (IT.IntervalSet.max_elt overlaps).Interval_tree.Interval.value.y +. 30.
       with Not_found -> 10. in
     t.y <- y;
     t.children' |> List.iter process in
@@ -80,7 +81,6 @@ let arrow_height = 10.
 
 let thin   cr = Cairo.set_line_width cr 2.0
 let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
-let blue   cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.0 ~b:1.0
 
 let thread_label cr =
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
@@ -89,10 +89,10 @@ let thread cr =
   Cairo.set_line_width cr 4.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
-let get_thread time tid =
+let get_thread _time tid =
   try Hashtbl.find Thread.threads tid
   with Not_found ->
-    Thread.create ~parent:Thread.top_thread time tid
+    Thread.top_thread
 
 let extend _cr _t _time =
   ()
@@ -108,26 +108,27 @@ let line cr time src recv colour =
   Cairo.line_to cr ~x:(x_of_time time) ~y:recv.Thread.y;
   Cairo.stroke cr
 
-let arrow cr src src_time recv recv_time arrow_colour =
+let arrow cr src src_time recv recv_time =
   let src = get_thread src_time src in
   let recv = get_thread recv_time recv in
 
-  let src_y =
-    if (src.Thread.tid :> int) = 0 then recv.Thread.y +. 20. else src.Thread.y in
+  if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
+    let src_x = x_of_time src_time in
+    let src_y = src.Thread.y in
 
-  arrow_colour cr;
-  Cairo.move_to cr ~x:(x_of_time src_time) ~y:src_y;
-  let arrow_head_y =
-    if src_y < recv.Thread.y then recv.Thread.y -. arrow_height
-    else recv.Thread.y +. arrow_height in
-  let x = x_of_time recv_time in
-  Cairo.line_to cr ~x ~y:arrow_head_y;
-  Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
-  Cairo.line_to cr ~x ~y:recv.Thread.y;
-  Cairo.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
-  Cairo.line_to cr ~x ~y:arrow_head_y;
-  Cairo.stroke_preserve cr;
-  Cairo.fill cr
+    Cairo.move_to cr ~x:src_x ~y:src_y;
+    let arrow_head_y =
+      if src_y < recv.Thread.y then recv.Thread.y -. arrow_height
+      else recv.Thread.y +. arrow_height in
+    let x = x_of_time recv_time in
+    Cairo.line_to cr ~x ~y:arrow_head_y;
+    Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
+    Cairo.line_to cr ~x ~y:recv.Thread.y;
+    Cairo.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
+    Cairo.line_to cr ~x ~y:arrow_head_y;
+    Cairo.stroke_preserve cr;
+    Cairo.fill cr
+  )
 
 let is_label ev =
   match ev.Event.op with
@@ -136,7 +137,11 @@ let is_label ev =
 
 let render events path =
   let open Event in
-  let surface = Cairo.Image.(create RGB24 ~width:900 ~height:600) in
+  let trace_end_time = (List.nth events (List.length events - 1)).time in
+
+  let width = (x_of_time trace_end_time |> truncate |> min 4096) + 10 in
+  Printf.printf "width = %d\n" width;
+  let surface = Cairo.Image.(create RGB24 ~width ~height:800) in
   let cr = Cairo.create surface in
 
   Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
@@ -155,7 +160,7 @@ let render events path =
     | Creates (parent, child) ->
         (* Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time; *)
         let p = get_thread time parent in
-        Thread.create ~parent:p time child |> ignore
+        Thread.create ~parent:p time trace_end_time child |> ignore
     | Resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
     | Becomes (a, _b) -> (get_thread time a).Thread.end_time <- time
     | Label _ | Reads _ -> ()
@@ -177,8 +182,14 @@ let render events path =
     | Creates (parent, child) -> line cr time parent child thread
     | Reads (a, b) ->
         let end_time = (get_thread time b).Thread.end_time in
-        arrow cr b end_time a time blue
-    | Resolves (a, b) -> arrow cr a time b time green
+        thin cr;
+        let alpha = 1.0 -. (min 1.0 ((x_of_time time -. x_of_time end_time) /. 6000.)) in
+        Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
+        arrow cr b end_time a time
+    | Resolves (a, b) ->
+        if a <> -1 then
+          green cr;
+          arrow cr a time b time
     | Becomes (a, b) ->
         Printf.printf "%a becomes %a\n" fmt a fmt b;
         line cr time a b thread

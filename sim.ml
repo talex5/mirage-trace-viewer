@@ -80,8 +80,6 @@ let () =
     events := !events |> Time_map.remove time;
     fn ()
   done;
-  Event.(record {time = !now; op = Reads (toplevel, id_of_thread main)});
-  Event.(record {time = !now; op = Resolves (toplevel, toplevel)});
 
   let ch = open_out "log.sexp" in
   List.rev !Event.event_log |> List.iter (fun ev ->
