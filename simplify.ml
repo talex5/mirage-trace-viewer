@@ -1,6 +1,5 @@
-(** If one thread becomes another, then it didn't do anything interesting before that, so
- * just replace all references to it with the final thread.
- * Note: this does mean that we might "create" a thread that already exists. *)
+(** If one thread becomes another, replace all further occurances of the first thread ID
+ * with the second. *)
 let becomes : (Event.thread, Event.thread) Hashtbl.t = Hashtbl.create 10
 
 let rec filter_map f = function

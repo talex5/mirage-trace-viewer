@@ -57,6 +57,8 @@ end
 
 module IT = ITree.Make(Thread)
 
+exception Found_gap
+
 let arrange () =
   let max_y = ref 0. in
   let open Thread in
@@ -69,15 +71,24 @@ let arrange () =
     } :: acc in
   let intervals = Hashtbl.fold add_interval Thread.threads [] in
   let layout = IT.create intervals in
-  let rec process t =
+  let rec process t ~parent =
     let overlaps = IT.overlapping_interval layout (t.start_time, t.end_time) in
-    let y =
-      try (IT.IntervalSet.max_elt overlaps).Interval_tree.Interval.value.y +. 30.
-      with Not_found -> 10. in
-    t.y <- y;
-    max_y := max !max_y y;
-    t.children' |> List.iter process in
-  top_thread.children' |> List.iter process;
+    let _, overlap_parent, below_parent = overlaps |> IT.IntervalSet.split {Interval_tree.Interval.lbound = 0.; rbound = 0.; value = parent} in
+    let y = ref parent.y in
+    if overlap_parent then y := !y +. 30.;
+
+    begin try
+      below_parent |> IT.IntervalSet.iter (fun i ->
+        let iy = i.Interval_tree.Interval.value.y in
+        if iy = !y then y := !y +. 30.
+        else if iy > !y then raise Found_gap
+      );
+    with Found_gap -> () end;
+
+    t.y <- !y;
+    max_y := max !max_y t.y;
+    t.children' |> List.iter (process ~parent:t) in
+  top_thread.children' |> List.iter (process ~parent:top_thread);
   layout, !max_y
 
 let scale = ref 1000.
