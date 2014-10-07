@@ -29,9 +29,11 @@ let rec shorten = function
 *)
 
 let simplify evs =
+  let open Event in
+  let start_time = (List.hd evs).time in
   evs |> filter_map (fun ev ->
-    let open Event in
     let r = replacement in
+    let ev = {ev with time = ev.time -. start_time} in
     match ev.op with
     | Creates (parent, child) ->
         let a = r parent in
