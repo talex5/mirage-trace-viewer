@@ -78,7 +78,7 @@ let arrange () =
     max_y := max !max_y y;
     t.children' |> List.iter process in
   top_thread.children' |> List.iter process;
-  !max_y
+  layout, !max_y
 
 let scale = ref 1000.
 let trace_start_time = ref 0.0
@@ -168,10 +168,10 @@ let render events =
     | Label _ | Reads _ -> ()
   );
 
-  let max_y = arrange () in
+  let layout, max_y = arrange () in
   area#misc#set_size_request ~height:(max_y +. 20. |> truncate) ();
 
-  area#event#connect#expose ==> (fun _ev ->
+  area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
 
     Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
@@ -184,8 +184,14 @@ let render events =
     Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
     Cairo.set_line_join cr Cairo.JOIN_BEVEL;
 
+    let expose_area = GdkEvent.Expose.area ev in
+
     thread cr;
-    Thread.iter_threads (fun t ->
+    let visible_t_min = time_of_x (float_of_int (Gdk.Rectangle.x expose_area)) in
+    let visible_t_max = time_of_x (float_of_int (Gdk.Rectangle.(x expose_area + width expose_area))) in
+    let visible_threads = IT.overlapping_interval layout (visible_t_min, visible_t_max) in
+    visible_threads |> IT.IntervalSet.iter (fun i ->
+      let t = i.Interval_tree.Interval.value in
       Cairo.move_to cr ~x:(x_of_time t.Thread.start_time) ~y:t.Thread.y;
       Cairo.line_to cr ~x:(x_of_time t.Thread.end_time) ~y:t.Thread.y;
       Cairo.stroke cr;

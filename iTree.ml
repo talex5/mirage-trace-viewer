@@ -54,16 +54,16 @@ module Make(Value : Set.OrderedType) = struct
       ) in
     loop 0 (Array.length arr)
 
-  (* Extend [acc] with intervals from the sorted array [intervals] where
-   * [key interval] is in the given range. *)
-  let add_range intervals (key : Interval.t -> float) test acc =
+  (* Extend [acc] with intervals from the sorted array [intervals] from the
+   * index where [test_start interval] is true until [test_end interval] is false. *)
+  let add_range intervals test_start test_end acc =
     let l = Array.length intervals in
-    let first = intervals |> count_before (fun i2 -> test (key i2)) in
+    let first = intervals |> count_before (fun i2 -> test_start i2) in
     let rec collect acc i =
       if i = l then acc
       else (
         let i2 = intervals.(i) in
-        if test (key i2) then collect (IntervalSet.add i2 acc) (i + 1)
+        if test_end i2 then collect (IntervalSet.add i2 acc) (i + 1)
         else acc
       ) in
     collect acc first
@@ -87,6 +87,6 @@ module Make(Value : Set.OrderedType) = struct
 
     let open Interval_tree.Interval in
     straddling_start
-    |> add_range t.by_start (fun i2 -> i2.lbound) (fun x -> lbound <= x && x < rbound)
-    |> add_range t.by_end   (fun i2 -> i2.rbound) (fun x -> lbound < x && x <= rbound)
+    |> add_range t.by_start (fun i -> lbound <= i.lbound) (fun i -> i.lbound < rbound)
+    |> add_range t.by_end   (fun i -> lbound < i.rbound) (fun i -> i.rbound <= rbound)
 end
