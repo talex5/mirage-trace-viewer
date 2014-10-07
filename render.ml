@@ -100,14 +100,14 @@ let time_of_x x = ((x -. 20.) /. !scale) +. !view_start_time
 let arrow_width = 4.
 let arrow_height = 10.
 
-let thin   cr = Cairo.set_line_width cr 2.0
+let thin   cr = Cairo.set_line_width cr 1.0
 let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
 
 let thread_label cr =
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
 
 let thread cr =
-  Cairo.set_line_width cr 4.0;
+  Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
 let get_thread _time tid =
@@ -188,7 +188,7 @@ let render events =
     Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
     Cairo.paint cr;
 
-    Cairo.set_font_size cr 20.;
+    Cairo.set_font_size cr 12.;
     Cairo.select_font_face cr "Sans";
 
     Cairo.set_line_width cr 2.0;
@@ -233,7 +233,7 @@ let render events =
 
     thread_label cr;
     Thread.iter_threads (fun t ->
-      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time -. 15.) ~y:(t.Thread.y +. 5.);
+      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time +. 2.) ~y:(t.Thread.y -. 3.);
       Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
     );
 
