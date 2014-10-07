@@ -97,6 +97,9 @@ let view_start_time = ref 0.0
 let x_of_time t = 20. +. (t -. !view_start_time)  *. !scale
 let time_of_x x = ((x -. 20.) /. !scale) +. !view_start_time
 
+let view_start_y = ref 0.0
+let y_of_thread t = t.Thread.y -. !view_start_y
+
 let arrow_width = 4.
 let arrow_height = 10.
 
@@ -126,8 +129,8 @@ let line cr time src recv colour =
   let src = get_thread time src in
   let recv = get_thread time recv in
   colour cr;
-  Cairo.move_to cr ~x:(x_of_time time) ~y:src.Thread.y;
-  Cairo.line_to cr ~x:(x_of_time time) ~y:recv.Thread.y;
+  Cairo.move_to cr ~x:(x_of_time time) ~y:(y_of_thread src);
+  Cairo.line_to cr ~x:(x_of_time time) ~y:(y_of_thread recv);
   Cairo.stroke cr
 
 let arrow cr src src_time recv recv_time =
@@ -136,16 +139,17 @@ let arrow cr src src_time recv recv_time =
 
   if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
     let src_x = x_of_time src_time in
-    let src_y = src.Thread.y in
+    let src_y = y_of_thread src in
+    let recv_y = y_of_thread recv in
 
     Cairo.move_to cr ~x:src_x ~y:src_y;
     let arrow_head_y =
-      if src_y < recv.Thread.y then recv.Thread.y -. arrow_height
-      else recv.Thread.y +. arrow_height in
+      if src_y < recv_y then recv_y -. arrow_height
+      else recv_y +. arrow_height in
     let x = x_of_time recv_time in
     Cairo.line_to cr ~x ~y:arrow_head_y;
     Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
-    Cairo.line_to cr ~x ~y:recv.Thread.y;
+    Cairo.line_to cr ~x ~y:recv_y;
     Cairo.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
     Cairo.line_to cr ~x ~y:arrow_head_y;
     Cairo.stroke_preserve cr;
@@ -162,11 +166,7 @@ let labels = Hashtbl.create 1000
 let render events =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
-  let swin = GBin.scrolled_window
-    ~packing:win#add
-    ~hpolicy:`NEVER
-    () in
-  let area = GMisc.drawing_area ~packing:swin#add_with_viewport () in
+  let area = GMisc.drawing_area ~packing:win#add () in
   win#show ();
   let open Event in
   let trace_end_time = (List.nth events (List.length events - 1)).time in
@@ -214,8 +214,8 @@ let render events =
         named_thread cr
       else
         anonymous_thread cr;
-      Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:t.Thread.y;
-      Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:t.Thread.y;
+      Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:(y_of_thread t);
+      Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:(y_of_thread t);
       Cairo.stroke cr;
     );
 
@@ -250,7 +250,7 @@ let render events =
         let msg =
           try Hashtbl.find labels t.Thread.tid
           with Not_found -> string_of_int (t.Thread.tid :> int) in
-        Cairo.move_to cr ~x:start_x ~y:(t.Thread.y -. 3.);
+        Cairo.move_to cr ~x:start_x ~y:(y_of_thread t -. 3.);
         Cairo.show_text cr msg
       )
     );
@@ -260,25 +260,49 @@ let render events =
 
   win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
 
+  let set_start_time t =
+    view_start_time :=
+      min
+        trace_end_time
+        (max !trace_start_time t) in
+
   area#misc#set_app_paintable true;
-  area#event#add [`SCROLL];
+  area#event#add [`SCROLL; `BUTTON1_MOTION; `BUTTON_PRESS];
   area#event#connect#scroll ==> (fun ev ->
     let x = GdkEvent.Scroll.x ev in
     let t_at_pointer = time_of_x x in
     let redraw () =
       let t_new_at_pointer = time_of_x x in
-      view_start_time :=
-        min
-          trace_end_time
-          (max
-            !trace_start_time
-            (!view_start_time -. (t_new_at_pointer -. t_at_pointer)));
+      set_start_time (!view_start_time -. (t_new_at_pointer -. t_at_pointer));
       GtkBase.Widget.queue_draw area#as_widget in
     begin match GdkEvent.Scroll.direction ev with
     | `UP -> scale := !scale *. 1.2; redraw ()
     | `DOWN -> scale := !scale /. 1.2; redraw ()
     | _ -> () end;
     true
+  );
+
+  let drag_start = ref None in
+  area#event#connect#button_press ==> (fun ev ->
+    if GdkEvent.Button.button ev = 1 then (
+      drag_start := Some (GdkEvent.Button.(time_of_x (x ev), y ev +. !view_start_y));
+      true;
+    ) else false
+  );
+
+  area#event#connect#motion_notify ==> (fun ev ->
+    match !drag_start with
+    | None -> false
+    | Some (start_time, start_y) ->
+        let x = GdkEvent.Motion.x ev in
+        let y = GdkEvent.Motion.y ev in
+        let time_at_pointer = time_of_x x in
+        if time_at_pointer <> start_time || start_y <> y then (
+          set_start_time (start_time -. (x /. !scale));
+          view_start_y := max 0.0 (start_y -. y) |> min max_y;
+          GtkBase.Widget.queue_draw area#as_widget
+        );
+        true
   );
 
   GMain.Main.main ()
