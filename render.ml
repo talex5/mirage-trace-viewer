@@ -221,9 +221,11 @@ let render events =
           Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
           arrow cr b end_time a time
       | Resolves (a, b) ->
-          if a <> -1 then
+          if a <> -1 then (
+            let end_time = (get_thread time a).Thread.end_time in
             green cr;
-            arrow cr a time b time
+            arrow cr a (min end_time time) b time
+          )
       | Becomes (a, b) ->
           line cr time a b thread
       | Label _ -> ()
