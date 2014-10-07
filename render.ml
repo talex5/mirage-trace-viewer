@@ -187,13 +187,15 @@ let render events =
     let expose_area = GdkEvent.Expose.area ev in
 
     thread cr;
-    let visible_t_min = time_of_x (float_of_int (Gdk.Rectangle.x expose_area)) in
-    let visible_t_max = time_of_x (float_of_int (Gdk.Rectangle.(x expose_area + width expose_area))) in
+    let visible_x_min = float_of_int (Gdk.Rectangle.x expose_area) in
+    let visible_x_max = float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)) in
+    let visible_t_min = time_of_x visible_x_min in
+    let visible_t_max = time_of_x visible_x_max in
     let visible_threads = IT.overlapping_interval layout (visible_t_min, visible_t_max) in
     visible_threads |> IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time) ~y:t.Thread.y;
-      Cairo.line_to cr ~x:(x_of_time t.Thread.end_time) ~y:t.Thread.y;
+      Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:t.Thread.y;
+      Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:t.Thread.y;
       Cairo.stroke cr;
     );
 
