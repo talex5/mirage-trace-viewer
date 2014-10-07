@@ -232,9 +232,14 @@ let render events =
     );
 
     thread_label cr;
-    Thread.iter_threads (fun t ->
-      Cairo.move_to cr ~x:(x_of_time t.Thread.start_time +. 2.) ~y:(t.Thread.y -. 3.);
-      Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
+    visible_threads |> IT.IntervalSet.iter (fun i ->
+      let t = i.Interval_tree.Interval.value in
+      let start_x = x_of_time t.Thread.start_time +. 2. in
+      let end_x = x_of_time t.Thread.end_time in
+      if end_x -. start_x > 16. then (
+        Cairo.move_to cr ~x:start_x ~y:(t.Thread.y -. 3.);
+        Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
+      )
     );
 
     events |> List.iter (fun ev ->
