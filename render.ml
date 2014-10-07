@@ -91,11 +91,24 @@ let arrange () =
   top_thread.children' |> List.iter (process ~parent:top_thread);
   layout, !max_y
 
+let calc_grid_step scale =
+  let l = 2.5 -. (log scale /. log 10.) |> floor in
+  10. ** l
+
 let scale = ref 1000.
 let trace_start_time = ref 0.0
 let view_start_time = ref 0.0
 let x_of_time t = 20. +. (t -. !view_start_time)  *. !scale
 let time_of_x x = ((x -. 20.) /. !scale) +. !view_start_time
+
+let clip_x_of_time t =
+  x_of_time t
+  |> min 1_000_000.
+  |> max (-1_000_000.)
+
+let grid_step = ref (calc_grid_step !scale)
+
+let () = Printf.printf "grid_step = %.2f\n%!" !grid_step
 
 let view_start_y = ref 0.0
 let y_of_thread t = t.Thread.y -. !view_start_y
@@ -138,7 +151,7 @@ let arrow cr src src_time recv recv_time =
   let recv = get_thread recv_time recv in
 
   if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
-    let src_x = x_of_time src_time in
+    let src_x = clip_x_of_time src_time in
     let src_y = y_of_thread src in
     let recv_y = y_of_thread recv in
 
@@ -146,7 +159,7 @@ let arrow cr src src_time recv recv_time =
     let arrow_head_y =
       if src_y < recv_y then recv_y -. arrow_height
       else recv_y +. arrow_height in
-    let x = x_of_time recv_time in
+    let x = clip_x_of_time recv_time in
     Cairo.line_to cr ~x ~y:arrow_head_y;
     Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
     Cairo.line_to cr ~x ~y:recv_y;
@@ -162,6 +175,34 @@ let is_label ev =
   | _ -> false
 
 let labels = Hashtbl.create 1000
+
+let draw_grid cr area  =
+  Cairo.set_line_width cr 1.0;
+  Cairo.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
+
+  let top = Gdk.Rectangle.(y area) |> float_of_int in
+  let bottom = Gdk.Rectangle.(y area + height area) |> float_of_int in
+
+  let area_start_time = time_of_x (float_of_int (Gdk.Rectangle.(x area))) in
+  let grid_start_x = floor (area_start_time /. !grid_step) *. !grid_step |> x_of_time in
+  let area_end_x = Gdk.Rectangle.(x area + width area) |> float_of_int in
+  let grid_step_x = !grid_step *. !scale in
+  let rec draw x =
+    if x < area_end_x then (
+      Cairo.move_to cr ~x:x ~y:top;
+      Cairo.line_to cr ~x:x ~y:bottom;
+      Cairo.stroke cr;
+      draw (x +. grid_step_x)
+    ) in
+  draw grid_start_x;
+  Cairo.move_to cr ~x:4.0 ~y:(bottom -. 4.);
+  Cairo.set_source_rgb cr ~r:0.4 ~g:0.4 ~b:0.4;
+  let msg =
+    if !grid_step >= 1.0 then Printf.sprintf "Each grid division: %.f s" !grid_step
+    else if !grid_step >= 0.001 then Printf.sprintf "Each grid division: %.f ms" (!grid_step *. 1000.)
+    else if !grid_step >= 0.000_001 then Printf.sprintf "Each grid division: %.f us" (!grid_step *. 1_000_000.)
+    else Printf.sprintf "Each grid division: %.2g ns" (!grid_step *. 1_000_000_000.) in
+  Cairo.show_text cr msg
 
 let render events =
   GMain.init () |> ignore;
@@ -182,7 +223,8 @@ let render events =
         Thread.create ~parent:p time trace_end_time child |> ignore
     | Resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
     | Becomes (a, _b) -> (get_thread time a).Thread.end_time <- time
-    | Label _ | Reads _ -> ()
+    | Reads _ -> ()
+    | Label (a, msg) -> Hashtbl.add labels a msg
   );
 
   let layout, max_y = arrange () in
@@ -190,6 +232,7 @@ let render events =
 
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
+    let expose_area = GdkEvent.Expose.area ev in
 
     Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
     Cairo.paint cr;
@@ -197,11 +240,11 @@ let render events =
     Cairo.set_font_size cr 12.;
     Cairo.select_font_face cr "Sans";
 
+    draw_grid cr expose_area;
+
     Cairo.set_line_width cr 2.0;
     Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
     Cairo.set_line_join cr Cairo.JOIN_BEVEL;
-
-    let expose_area = GdkEvent.Expose.area ev in
 
     let visible_x_min = float_of_int (Gdk.Rectangle.x expose_area) in
     let visible_x_max = float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)) in
@@ -237,8 +280,7 @@ let render events =
           )
       | Becomes (a, b) ->
           line cr time a b anonymous_thread
-      | Label (a, msg) ->
-          Hashtbl.add labels a msg
+      | Label _ -> ()
     );
 
     thread_label cr;
@@ -272,6 +314,7 @@ let render events =
     let x = GdkEvent.Scroll.x ev in
     let t_at_pointer = time_of_x x in
     let redraw () =
+      grid_step := calc_grid_step !scale;
       let t_new_at_pointer = time_of_x x in
       set_start_time (!view_start_time -. (t_new_at_pointer -. t_at_pointer));
       GtkBase.Widget.queue_draw area#as_widget in
