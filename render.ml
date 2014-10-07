@@ -1,6 +1,8 @@
 let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
   ignore (signal ~callback)
 
+let margin = 20.
+
 module Thread = struct
   type t = {
     tid : Event.thread;
@@ -98,8 +100,8 @@ let calc_grid_step scale =
 let scale = ref 1000.
 let trace_start_time = ref 0.0
 let view_start_time = ref 0.0
-let x_of_time t = 20. +. (t -. !view_start_time)  *. !scale
-let time_of_x x = ((x -. 20.) /. !scale) +. !view_start_time
+let x_of_time t = (t -. !view_start_time)  *. !scale
+let time_of_x x = (x /. !scale) +. !view_start_time
 
 let clip_x_of_time t =
   x_of_time t
@@ -207,12 +209,19 @@ let draw_grid cr area  =
 let render events =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
-  let area = GMisc.drawing_area ~packing:win#add () in
+  let hadjustment = GData.adjustment () in
+  let vadjustment = GData.adjustment () in
+  let table = GPack.table ~rows:2 ~columns:2 ~homogeneous:false ~packing:win#add () in
+  let area = GMisc.drawing_area ~packing:(table#attach ~left:0 ~top:0 ~expand:`BOTH ~fill:`BOTH) () in
+
+  let _hscroll = GRange.scrollbar `HORIZONTAL ~adjustment:hadjustment ~packing:(table#attach ~left:0 ~top:1 ~expand:`X ~fill:`BOTH) () in
+  let _vscroll = GRange.scrollbar `VERTICAL ~adjustment:vadjustment ~packing:(table#attach ~left:1 ~top:0 ~expand:`Y ~fill:`BOTH) () in
+
   win#show ();
   let open Event in
   let trace_end_time = (List.nth events (List.length events - 1)).time in
   trace_start_time := (List.hd events).time;
-  view_start_time := !trace_start_time;
+  view_start_time := !trace_start_time -. (margin /. !scale);
 
   events |> List.iter (fun ev ->
     let time = ev.time in
@@ -228,7 +237,13 @@ let render events =
   );
 
   let layout, max_y = arrange () in
-  area#misc#set_size_request ~height:(max_y +. 20. |> truncate) ();
+
+  let set_scollbars alloc =
+    let max_x = (trace_end_time -. !trace_start_time) *. !scale in
+    hadjustment#set_bounds ~lower:(-.margin) ~upper:(max_x +. margin) ~page_size:(float_of_int alloc.Gtk.width) ();
+    vadjustment#set_bounds ~lower:(-.margin) ~upper:(max_y +. margin) ~page_size:(float_of_int alloc.Gtk.height) () in
+
+  area#misc#connect#size_allocate ==> (fun alloc -> set_scollbars alloc);
 
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
@@ -303,10 +318,16 @@ let render events =
   win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
 
   let set_start_time t =
-    view_start_time :=
-      min
-        trace_end_time
-        (max !trace_start_time t) in
+    view_start_time := t
+      |> min (trace_end_time -. ((hadjustment#page_size -. margin) /. !scale))
+      |> max (!trace_start_time -. (margin /. !scale));
+    hadjustment#set_value ((!view_start_time -. !trace_start_time) *. !scale) in
+
+  let set_view_y y =
+    view_start_y := y
+      |> min (max_y -. (vadjustment#page_size /. !scale))
+      |> max 0.0;
+    vadjustment#set_value !view_start_y in
 
   area#misc#set_app_paintable true;
   area#event#add [`SCROLL; `BUTTON1_MOTION; `BUTTON_PRESS];
@@ -319,8 +340,8 @@ let render events =
       set_start_time (!view_start_time -. (t_new_at_pointer -. t_at_pointer));
       GtkBase.Widget.queue_draw area#as_widget in
     begin match GdkEvent.Scroll.direction ev with
-    | `UP -> scale := !scale *. 1.2; redraw ()
-    | `DOWN -> scale := !scale /. 1.2; redraw ()
+    | `UP -> scale := !scale *. 1.2; set_scollbars area#misc#allocation; redraw ()
+    | `DOWN -> scale := !scale /. 1.2; redraw (); set_scollbars area#misc#allocation
     | _ -> () end;
     true
   );
@@ -342,10 +363,20 @@ let render events =
         let time_at_pointer = time_of_x x in
         if time_at_pointer <> start_time || start_y <> y then (
           set_start_time (start_time -. (x /. !scale));
-          view_start_y := max 0.0 (start_y -. y) |> min max_y;
+          set_view_y (start_y -. y);
           GtkBase.Widget.queue_draw area#as_widget
         );
         true
+  );
+
+  hadjustment#connect#value_changed ==> (fun () ->
+    set_start_time (!trace_start_time +. (hadjustment#value /. !scale));
+    GtkBase.Widget.queue_draw area#as_widget
+  );
+
+  vadjustment#connect#value_changed ==> (fun () ->
+    set_view_y vadjustment#value;
+    GtkBase.Widget.queue_draw area#as_widget
   );
 
   GMain.Main.main ()
