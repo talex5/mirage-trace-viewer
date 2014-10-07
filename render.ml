@@ -106,7 +106,11 @@ let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
 let thread_label cr =
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
 
-let thread cr =
+let anonymous_thread cr =
+  Cairo.set_line_width cr 2.0;
+  Cairo.set_source_rgb cr ~r:0.6 ~g:0.6 ~b:0.6
+
+let named_thread cr =
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
@@ -153,6 +157,8 @@ let is_label ev =
   | Event.Label _ -> true
   | _ -> false
 
+let labels = Hashtbl.create 1000
+
 let render events =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
@@ -197,7 +203,6 @@ let render events =
 
     let expose_area = GdkEvent.Expose.area ev in
 
-    thread cr;
     let visible_x_min = float_of_int (Gdk.Rectangle.x expose_area) in
     let visible_x_max = float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)) in
     let visible_t_min = time_of_x visible_x_min in
@@ -205,6 +210,10 @@ let render events =
     let visible_threads = IT.overlapping_interval layout (visible_t_min, visible_t_max) in
     visible_threads |> IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
+      if Hashtbl.mem labels t.Thread.tid then
+        named_thread cr
+      else
+        anonymous_thread cr;
       Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:t.Thread.y;
       Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:t.Thread.y;
       Cairo.stroke cr;
@@ -213,7 +222,7 @@ let render events =
     events |> List.iter (fun ev ->
       let time = ev.time in
       match ev.op with
-      | Creates (parent, child) -> line cr time parent child thread
+      | Creates (parent, child) -> line cr time parent child anonymous_thread
       | Reads (a, b) ->
           let end_time = (get_thread time b).Thread.end_time in
           thin cr;
@@ -227,8 +236,9 @@ let render events =
             arrow cr a (min end_time time) b time
           )
       | Becomes (a, b) ->
-          line cr time a b thread
-      | Label _ -> ()
+          line cr time a b anonymous_thread
+      | Label (a, msg) ->
+          Hashtbl.add labels a msg
     );
 
     thread_label cr;
@@ -237,20 +247,12 @@ let render events =
       let start_x = x_of_time t.Thread.start_time +. 2. in
       let end_x = x_of_time t.Thread.end_time in
       if end_x -. start_x > 16. then (
+        let msg =
+          try Hashtbl.find labels t.Thread.tid
+          with Not_found -> string_of_int (t.Thread.tid :> int) in
         Cairo.move_to cr ~x:start_x ~y:(t.Thread.y -. 3.);
-        Cairo.show_text cr (string_of_int (t.Thread.tid :> int));
+        Cairo.show_text cr msg
       )
-    );
-
-    events |> List.iter (fun ev ->
-      let time = ev.time in
-      match ev.op with
-      | Label (a, msg) ->
-          let a = get_thread time a in
-          thread_label cr;
-          Cairo.move_to cr ~x:(x_of_time time) ~y:(a.Thread.y -. 5.);
-          Cairo.show_text cr msg
-      | _ -> ()
     );
 
     true
