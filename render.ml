@@ -12,6 +12,7 @@ module Thread = struct
     mutable prev : t option;
     mutable next : t option;
     mutable children' : t list;
+    mutable becomes : Event.thread option;
   }
 
   let threads : (Event.thread, t) Hashtbl.t = Hashtbl.create 10
@@ -24,6 +25,7 @@ module Thread = struct
     prev = None;
     next = None;
     children' = [];
+    becomes = None;
   }
 
   let create ~parent start_time end_time tid =
@@ -35,6 +37,7 @@ module Thread = struct
       prev = Some parent;
       next = parent.next;
       children' = [];
+      becomes = None;
     } in
     parent.next <- Some t;
     parent.children' <- t :: parent.children';
@@ -75,9 +78,10 @@ let arrange () =
   let layout = IT.create intervals in
   let rec process t ~parent =
     let overlaps = IT.overlapping_interval layout (t.start_time, t.end_time) in
-    let _, overlap_parent, below_parent = overlaps |> IT.IntervalSet.split {Interval_tree.Interval.lbound = 0.; rbound = 0.; value = parent} in
+    let p_interval = {Interval_tree.Interval.lbound = parent.start_time; rbound = parent.end_time; value = parent} in
+    let _, overlap_parent, below_parent = overlaps |> IT.IntervalSet.split p_interval in
     let y = ref parent.y in
-    if overlap_parent then y := !y +. 30.;
+    if overlap_parent && parent.becomes <> Some t.tid then y := !y +. 30.;
 
     begin try
       below_parent |> IT.IntervalSet.iter (fun i ->
@@ -132,7 +136,7 @@ let named_thread cr =
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
-let get_thread _time tid =
+let get_thread tid =
   try Hashtbl.find Thread.threads tid
   with Not_found ->
     Thread.top_thread
@@ -141,16 +145,16 @@ let extend _cr _t _time =
   ()
 
 let line cr time src recv colour =
-  let src = get_thread time src in
-  let recv = get_thread time recv in
+  let src = get_thread src in
+  let recv = get_thread recv in
   colour cr;
   Cairo.move_to cr ~x:(x_of_time time) ~y:(y_of_thread src);
   Cairo.line_to cr ~x:(x_of_time time) ~y:(y_of_thread recv);
   Cairo.stroke cr
 
 let arrow cr src src_time recv recv_time =
-  let src = get_thread src_time src in
-  let recv = get_thread recv_time recv in
+  let src = get_thread src in
+  let recv = get_thread recv in
 
   if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
     let src_x = clip_x_of_time src_time in
@@ -228,10 +232,13 @@ let render events =
     match ev.op with
     | Creates (parent, child) ->
         (* Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time; *)
-        let p = get_thread time parent in
+        let p = get_thread parent in
         Thread.create ~parent:p time trace_end_time child |> ignore
-    | Resolves (_a, b) -> (get_thread time b).Thread.end_time <- time
-    | Becomes (a, _b) -> (get_thread time a).Thread.end_time <- time
+    | Resolves (_a, b) -> (get_thread b).Thread.end_time <- time
+    | Becomes (a, b) ->
+        let a = get_thread a in
+        a.Thread.end_time <- time;
+        a.Thread.becomes <- Some b;
     | Reads _ -> ()
     | Label (a, msg) -> Hashtbl.add labels a msg
   );
@@ -282,14 +289,14 @@ let render events =
       match ev.op with
       | Creates (parent, child) -> line cr time parent child anonymous_thread
       | Reads (a, b) ->
-          let end_time = (get_thread time b).Thread.end_time in
+          let end_time = (get_thread b).Thread.end_time in
           thin cr;
           let alpha = 1.0 -. (min 1.0 ((x_of_time time -. x_of_time end_time) /. 6000.)) in
           Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
           arrow cr b end_time a time
       | Resolves (a, b) ->
           if a <> -1 then (
-            let end_time = (get_thread time a).Thread.end_time in
+            let end_time = (get_thread a).Thread.end_time in
             green cr;
             arrow cr a (min end_time time) b time
           )
