@@ -218,6 +218,9 @@ let draw_grid cr area  =
 let render events =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
+  win#set_default_size
+    ~width:(Gdk.Screen.width () / 2)
+    ~height:(Gdk.Screen.height () / 2);
   let hadjustment = GData.adjustment () in
   let vadjustment = GData.adjustment () in
   let table = GPack.table ~rows:2 ~columns:2 ~homogeneous:false ~packing:win#add () in
