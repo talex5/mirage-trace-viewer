@@ -123,7 +123,6 @@ let arrow_width = 4.
 let arrow_height = 10.
 
 let thin   cr = Cairo.set_line_width cr 1.0
-let green  cr = thin cr; Cairo.set_source_rgb cr ~r:0.0 ~g:0.5 ~b:0.0
 
 let thread_label cr =
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
@@ -152,27 +151,33 @@ let line cr time src recv colour =
   Cairo.line_to cr ~x:(x_of_time time) ~y:(y_of_thread recv);
   Cairo.stroke cr
 
-let arrow cr src src_time recv recv_time =
-  let src = get_thread src in
-  let recv = get_thread recv in
+let arrow cr src src_time recv recv_time (r, g, b) =
+  let width = (recv_time -. src_time) *. !scale in
+  let alpha = 1.0 -. (min 1.0 (width /. 6000.)) in
+  if alpha > 0.01 then (
+    Cairo.set_source_rgba cr ~r ~g ~b ~a:alpha;
 
-  if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
-    let src_x = clip_x_of_time src_time in
-    let src_y = y_of_thread src in
-    let recv_y = y_of_thread recv in
+    let src = get_thread src in
+    let recv = get_thread recv in
 
-    Cairo.move_to cr ~x:src_x ~y:src_y;
-    let arrow_head_y =
-      if src_y < recv_y then recv_y -. arrow_height
-      else recv_y +. arrow_height in
-    let x = clip_x_of_time recv_time in
-    Cairo.line_to cr ~x ~y:arrow_head_y;
-    Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
-    Cairo.line_to cr ~x ~y:recv_y;
-    Cairo.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
-    Cairo.line_to cr ~x ~y:arrow_head_y;
-    Cairo.stroke_preserve cr;
-    Cairo.fill cr
+    if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
+      let src_x = clip_x_of_time src_time in
+      let src_y = y_of_thread src in
+      let recv_y = y_of_thread recv in
+
+      Cairo.move_to cr ~x:src_x ~y:src_y;
+      let arrow_head_y =
+        if src_y < recv_y then recv_y -. arrow_height
+        else recv_y +. arrow_height in
+      let x = clip_x_of_time recv_time in
+      Cairo.line_to cr ~x ~y:arrow_head_y;
+      Cairo.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
+      Cairo.line_to cr ~x ~y:recv_y;
+      Cairo.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
+      Cairo.line_to cr ~x ~y:arrow_head_y;
+      Cairo.stroke_preserve cr;
+      Cairo.fill cr
+    )
   )
 
 let is_label ev =
@@ -291,14 +296,12 @@ let render events =
       | Reads (a, b) ->
           let end_time = (get_thread b).Thread.end_time in
           thin cr;
-          let alpha = 1.0 -. (min 1.0 ((x_of_time time -. x_of_time end_time) /. 6000.)) in
-          Cairo.set_source_rgba cr ~r:0.0 ~g:0.0 ~b:1.0 ~a:alpha;
-          arrow cr b end_time a time
+          arrow cr b end_time a time (0.0, 0.0, 1.0)
       | Resolves (a, b) ->
           if a <> -1 then (
-            let end_time = (get_thread a).Thread.end_time in
-            green cr;
-            arrow cr a (min end_time time) b time
+            let start_time = time
+              |> min (get_thread a).Thread.end_time in
+            arrow cr a start_time b time (0.0, 0.5, 0.0)
           )
       | Becomes (a, b) ->
           line cr time a b anonymous_thread
