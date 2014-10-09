@@ -3,100 +3,6 @@ let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
 
 let margin = 20.
 
-module Thread = struct
-  type t = {
-    tid : Event.thread;
-    start_time : float;
-    mutable end_time : float;
-    mutable y : float;
-    mutable prev : t option;
-    mutable next : t option;
-    mutable children' : t list;
-    mutable becomes : Event.thread option;
-  }
-
-  let threads : (Event.thread, t) Hashtbl.t = Hashtbl.create 10
-
-  let top_thread = {
-    tid = -1;
-    start_time = 0.0;
-    end_time = 0.0;
-    y = 0.0;
-    prev = None;
-    next = None;
-    children' = [];
-    becomes = None;
-  }
-
-  let create ~parent start_time end_time tid =
-    let t = {
-      tid;
-      start_time;
-      end_time;
-      y = 0.0;
-      prev = Some parent;
-      next = parent.next;
-      children' = [];
-      becomes = None;
-    } in
-    parent.next <- Some t;
-    parent.children' <- t :: parent.children';
-    begin match t.next with
-    | Some next -> next.prev <- Some t
-    | None -> () end;
-    Hashtbl.add threads tid t;
-    t
-
-  let iter_threads f =
-    let rec process = function
-      | None -> ()
-      | Some node -> f node; process node.next in
-    process (top_thread.next)
-
-  (* Sort by y first, so we can quickly find the lowest *)
-  let compare a b =
-    match compare a.y b.y with
-    | 0 -> compare a.tid b.tid
-    | r -> r
-end
-
-module IT = ITree.Make(Thread)
-
-exception Found_gap
-
-let arrange () =
-  let max_y = ref 0. in
-  let open Thread in
-  let add_interval _tid t acc =
-    assert (t.end_time >= t.start_time);
-    { Interval_tree.Interval.
-      lbound = t.start_time;
-      rbound = t.end_time;
-      value = t
-    } :: acc in
-  let intervals = Hashtbl.fold add_interval Thread.threads [] in
-  let layout = IT.create intervals in
-  let rec process t ~parent =
-    let overlaps = IT.overlapping_interval layout (t.start_time, t.end_time) in
-    let p_interval = {Interval_tree.Interval.lbound = parent.start_time; rbound = parent.end_time; value = parent} in
-    let _, overlap_parent, below_parent = overlaps |> IT.IntervalSet.split p_interval in
-    let y = ref parent.y in
-    if overlap_parent && parent.becomes <> Some t.tid then y := !y +. 30.;
-
-    begin try
-      below_parent |> IT.IntervalSet.iter (fun i ->
-        let iy = i.Interval_tree.Interval.value.y in
-        if iy = !y then y := !y +. 30.
-        else if iy > !y then raise Found_gap
-      );
-    with Found_gap -> () end;
-
-    t.y <- !y;
-    max_y := max !max_y t.y;
-    t.children' |> List.iter (process ~parent:t) in
-  top_thread.children' |> List.iter (process ~parent:top_thread);
-  layout, !max_y
-
 let calc_grid_step scale =
   let l = 2.5 -. (log scale /. log 10.) |> floor in
   10. ** l
@@ -107,6 +13,9 @@ let view_start_time = ref 0.0
 let x_of_time t = (t -. !view_start_time)  *. !scale
 let time_of_x x = (x /. !scale) +. !view_start_time
 
+let x_of_start t = x_of_time (Thread.start_time t)
+let x_of_end t = x_of_time (Thread.end_time t)
+
 let clip_x_of_time t =
   x_of_time t
   |> min 1_000_000.
@@ -114,15 +23,13 @@ let clip_x_of_time t =
 
 let grid_step = ref (calc_grid_step !scale)
 
-let () = Printf.printf "grid_step = %.2f\n%!" !grid_step
-
 let view_start_y = ref 0.0
-let y_of_thread t = t.Thread.y -. !view_start_y
+let y_of_thread t = Thread.y t -. !view_start_y
 
 let arrow_width = 4.
 let arrow_height = 10.
 
-let thin   cr = Cairo.set_line_width cr 1.0
+let thin cr = Cairo.set_line_width cr 1.0
 
 let thread_label cr =
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
@@ -135,16 +42,7 @@ let named_thread cr =
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
-let get_thread tid =
-  try Hashtbl.find Thread.threads tid
-  with Not_found ->
-    Thread.top_thread
-
-let extend _cr _t _time =
-  ()
-
 let line cr time src recv colour =
-  let recv = get_thread recv in
   colour cr;
   Cairo.move_to cr ~x:(x_of_time time) ~y:(y_of_thread src);
   Cairo.line_to cr ~x:(x_of_time time) ~y:(y_of_thread recv);
@@ -156,10 +54,7 @@ let arrow cr src src_time recv recv_time (r, g, b) =
   if alpha > 0.01 then (
     Cairo.set_source_rgba cr ~r ~g ~b ~a:alpha;
 
-    let src = get_thread src in
-    let recv = get_thread recv in
-
-    if src.Thread.tid <> -1  && src.Thread.tid <> recv.Thread.tid then (
+    if Thread.id src <> -1  && Thread.id src <> Thread.id recv then (
       let src_x = clip_x_of_time src_time in
       let src_y = y_of_thread src in
       let recv_y = y_of_thread recv in
@@ -178,13 +73,6 @@ let arrow cr src src_time recv recv_time (r, g, b) =
       Cairo.fill cr
     )
   )
-
-let is_label ev =
-  match ev.Event.op with
-  | Event.Label _ -> true
-  | _ -> false
-
-let labels = Hashtbl.create 1000
 
 let draw_grid cr area  =
   Cairo.set_line_width cr 1.0;
@@ -215,7 +103,7 @@ let draw_grid cr area  =
     else Printf.sprintf "Each grid division: %.2g s" !grid_step in
   Cairo.show_text cr msg
 
-let render events =
+let render top_thread =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
   win#set_default_size
@@ -230,28 +118,11 @@ let render events =
   let _vscroll = GRange.scrollbar `VERTICAL ~adjustment:vadjustment ~packing:(table#attach ~left:1 ~top:0 ~expand:`Y ~fill:`BOTH) () in
 
   win#show ();
-  let open Event in
-  let trace_end_time = (List.nth events (List.length events - 1)).time in
-  trace_start_time := (List.hd events).time;
+  let trace_end_time = Thread.end_time top_thread in
+  trace_start_time := Thread.start_time top_thread;
   view_start_time := !trace_start_time -. (margin /. !scale);
 
-  events |> List.iter (fun ev ->
-    let time = ev.time in
-    match ev.op with
-    | Creates (parent, child) ->
-        (* Printf.printf "%a creates %a at %.1f\n" fmt parent fmt child time; *)
-        let p = get_thread parent in
-        Thread.create ~parent:p time trace_end_time child |> ignore
-    | Resolves (_a, b) -> (get_thread b).Thread.end_time <- time
-    | Becomes (a, b) ->
-        let a = get_thread a in
-        a.Thread.end_time <- time;
-        a.Thread.becomes <- Some b;
-    | Reads _ -> ()
-    | Label (a, msg) -> Hashtbl.add labels a msg
-  );
-
-  let layout, max_y = arrange () in
+  let layout, max_y = Layout.arrange top_thread in
 
   let set_scollbars alloc =
     let max_x = (trace_end_time -. !trace_start_time) *. !scale in
@@ -259,6 +130,21 @@ let render events =
     vadjustment#set_bounds ~lower:(-.margin) ~upper:(max_y +. margin) ~page_size:(float_of_int alloc.Gtk.height) () in
 
   area#misc#connect#size_allocate ==> (fun alloc -> set_scollbars alloc);
+
+  let draw_interactions cr t =
+    Thread.interactions t |> List.iter (fun (time, op, other) ->
+      match op with
+      | Thread.Read ->
+          let end_time = Thread.end_time other in
+          thin cr;
+          arrow cr other end_time t time (0.0, 0.0, 1.0)
+      | Thread.Resolve ->
+          if Thread.id t <> -1 then (
+            let start_time = time
+              |> min (Thread.end_time t) in
+            arrow cr t start_time other time (0.0, 0.5, 0.0)
+          )
+    ) in
 
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
@@ -280,51 +166,36 @@ let render events =
     let visible_x_max = float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)) in
     let visible_t_min = time_of_x visible_x_min in
     let visible_t_max = time_of_x visible_x_max in
-    let visible_threads = IT.overlapping_interval layout (visible_t_min, visible_t_max) in
-    visible_threads |> IT.IntervalSet.iter (fun i ->
+    let visible_threads = Layout.IT.overlapping_interval layout (visible_t_min, visible_t_max) in
+    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      if Hashtbl.mem labels t.Thread.tid then
+      if Thread.label t <> None then
         named_thread cr
       else
         anonymous_thread cr;
-      Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:(y_of_thread t);
-      Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:(y_of_thread t);
+      Cairo.move_to cr ~x:(max visible_x_min (x_of_start t)) ~y:(y_of_thread t);
+      Cairo.line_to cr ~x:(min visible_x_max (x_of_end t)) ~y:(y_of_thread t);
       Cairo.stroke cr;
-      t.Thread.children' |> List.iter (fun child ->
-        line cr child.Thread.start_time t child.Thread.tid anonymous_thread
+      Thread.creates t |> List.iter (fun child ->
+        line cr (Thread.start_time child) t child anonymous_thread
       );
-      match t.Thread.becomes with
+      match Thread.becomes t with
       | None -> ()
       | Some child ->
-          line cr t.Thread.end_time t child anonymous_thread
+          line cr (Thread.end_time t) t child anonymous_thread
     );
 
-    events |> List.iter (fun ev ->
-      let time = ev.time in
-      match ev.op with
-      | Creates _ -> ()
-      | Reads (a, b) ->
-          let end_time = (get_thread b).Thread.end_time in
-          thin cr;
-          arrow cr b end_time a time (0.0, 0.0, 1.0)
-      | Resolves (a, b) ->
-          if a <> -1 then (
-            let start_time = time
-              |> min (get_thread a).Thread.end_time in
-            arrow cr a start_time b time (0.0, 0.5, 0.0)
-          )
-      | Becomes _ -> ()
-      | Label _ -> ()
-    );
+    top_thread |> Thread.iter (draw_interactions cr);
 
-    visible_threads |> IT.IntervalSet.iter (fun i ->
+    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      let start_x = x_of_time t.Thread.start_time +. 2. in
-      let end_x = x_of_time t.Thread.end_time in
+      let start_x = x_of_start t +. 2. in
+      let end_x = x_of_end t in
       if end_x -. start_x > 16. then (
         let msg =
-          try Hashtbl.find labels t.Thread.tid
-          with Not_found -> string_of_int (t.Thread.tid :> int) in
+          match Thread.label t with
+          | None -> string_of_int (Thread.id t)
+          | Some label -> label in
         thread_label cr;
         Cairo.move_to cr ~x:start_x ~y:(y_of_thread t -. 3.);
         Cairo.show_text cr msg
