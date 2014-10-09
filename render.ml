@@ -144,7 +144,6 @@ let extend _cr _t _time =
   ()
 
 let line cr time src recv colour =
-  let src = get_thread src in
   let recv = get_thread recv in
   colour cr;
   Cairo.move_to cr ~x:(x_of_time time) ~y:(y_of_thread src);
@@ -290,12 +289,19 @@ let render events =
       Cairo.move_to cr ~x:(max visible_x_min (x_of_time t.Thread.start_time)) ~y:(y_of_thread t);
       Cairo.line_to cr ~x:(min visible_x_max (x_of_time t.Thread.end_time)) ~y:(y_of_thread t);
       Cairo.stroke cr;
+      t.Thread.children' |> List.iter (fun child ->
+        line cr child.Thread.start_time t child.Thread.tid anonymous_thread
+      );
+      match t.Thread.becomes with
+      | None -> ()
+      | Some child ->
+          line cr t.Thread.end_time t child anonymous_thread
     );
 
     events |> List.iter (fun ev ->
       let time = ev.time in
       match ev.op with
-      | Creates (parent, child) -> line cr time parent child anonymous_thread
+      | Creates _ -> ()
       | Reads (a, b) ->
           let end_time = (get_thread b).Thread.end_time in
           thin cr;
@@ -306,12 +312,10 @@ let render events =
               |> min (get_thread a).Thread.end_time in
             arrow cr a start_time b time (0.0, 0.5, 0.0)
           )
-      | Becomes (a, b) ->
-          line cr time a b anonymous_thread
+      | Becomes _ -> ()
       | Label _ -> ()
     );
 
-    thread_label cr;
     visible_threads |> IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
       let start_x = x_of_time t.Thread.start_time +. 2. in
@@ -320,9 +324,10 @@ let render events =
         let msg =
           try Hashtbl.find labels t.Thread.tid
           with Not_found -> string_of_int (t.Thread.tid :> int) in
+        thread_label cr;
         Cairo.move_to cr ~x:start_x ~y:(y_of_thread t -. 3.);
         Cairo.show_text cr msg
-      )
+      );
     );
 
     true
