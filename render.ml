@@ -207,7 +207,13 @@ let render top_thread =
           | None -> string_of_int (Thread.id t)
           | Some label -> label in
         thread_label cr;
-        Cairo.move_to cr ~x:start_x ~y:(y_of_thread t -. 3.);
+
+        (* Show label on left margin if the thread starts off-screen *)
+        let x =
+          if start_x < -32. && end_x >= 32. then 4.
+          else start_x in
+
+        Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
         Cairo.show_text cr msg
       );
     );
