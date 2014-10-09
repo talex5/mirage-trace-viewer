@@ -211,7 +211,8 @@ let draw_grid cr area  =
     if !grid_step >= 1.0 then Printf.sprintf "Each grid division: %.f s" !grid_step
     else if !grid_step >= 0.001 then Printf.sprintf "Each grid division: %.f ms" (!grid_step *. 1000.)
     else if !grid_step >= 0.000_001 then Printf.sprintf "Each grid division: %.f us" (!grid_step *. 1_000_000.)
-    else Printf.sprintf "Each grid division: %.2g ns" (!grid_step *. 1_000_000_000.) in
+    else if !grid_step >= 0.000_000_001 then Printf.sprintf "Each grid division: %.f ns" (!grid_step *. 1_000_000_000.)
+    else Printf.sprintf "Each grid division: %.2g s" !grid_step in
   Cairo.show_text cr msg
 
 let render events =
