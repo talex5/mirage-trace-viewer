@@ -54,14 +54,17 @@ let from_channel ch =
 
   let running_thread = ref None in
   let switch time next =
-    begin match !running_thread with
-    | Some (start_time, prev) ->
-        let end_time = min time (prev.end_time) in
-        prev.activations <- (start_time, end_time) :: prev.activations
-    | None -> () end;
-    match next with
-    | Some next -> running_thread := Some (time, next)
-    | None -> running_thread := None in
+    match !running_thread, next with
+    | Some (_, prev), Some next when prev.tid = next.tid -> ()
+    | prev, next ->
+        begin match prev with
+        | Some (start_time, prev) ->
+            let end_time = min time (prev.end_time) in
+            prev.activations <- (start_time, end_time) :: prev.activations
+        | None -> () end;
+        match next with
+        | Some next -> running_thread := Some (time, next)
+        | None -> running_thread := None in
 
   events |> List.iter (fun sexp ->
     let open Event in
