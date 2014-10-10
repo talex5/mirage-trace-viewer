@@ -27,7 +27,7 @@ let make_thread ~tid ~start_time = {
   interactions = [];
   activations = [];
   failure = None;
-  y = 0.0;
+  y = -.infinity;
 }
 
 let rec iter fn thread =
@@ -106,9 +106,6 @@ let from_channel ch =
         switch ev.time (Some (get_thread a))
   );
   switch top_thread.end_time None;
-  top_thread |> iter (fun t ->
-    if t.end_time = infinity then t.end_time <- top_thread.end_time;
-  );
   top_thread
 
 let start_time t = t.start_time

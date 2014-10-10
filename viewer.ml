@@ -8,4 +8,6 @@ let () =
   let trace = Thread.from_channel ch in
   close_in ch;
 
-  Render.render trace
+  Gtk_viewer.make trace;
+
+  GMain.Main.main ()
