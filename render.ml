@@ -201,20 +201,31 @@ let render top_thread =
       let t = i.Interval_tree.Interval.value in
       let start_x = x_of_start t +. 2. in
       let end_x = x_of_end t in
-      if end_x -. start_x > 16. then (
+      let thread_width = end_x -. start_x in
+      if thread_width > 16. then (
         let msg =
           match Thread.label t with
           | None -> string_of_int (Thread.id t)
           | Some label -> label in
         thread_label cr;
 
-        (* Show label on left margin if the thread starts off-screen *)
-        let x =
-          if start_x < -32. && end_x >= 32. then 4.
-          else start_x in
-
-        Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
-        Cairo.show_text cr msg
+        let text_width = Cairo.((text_extents cr msg).x_advance) in
+        if text_width > thread_width then (
+          let x = start_x in
+          Cairo.save cr;
+          Cairo.rectangle cr ~x ~y:0.0 ~w:(end_x -. x) ~h:max_y;
+          Cairo.clip cr;
+          Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
+          Cairo.show_text cr msg;
+          Cairo.restore cr;
+        ) else (
+          (* Show label on left margin if the thread starts off-screen *)
+          let x =
+            if start_x < 4.0 then min 4.0 (end_x -. text_width)
+            else start_x in
+          Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
+          Cairo.show_text cr msg;
+        )
       );
     );
 
