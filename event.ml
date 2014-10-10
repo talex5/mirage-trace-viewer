@@ -10,6 +10,7 @@ type op =
   | Resolves of thread * thread
   | Becomes of thread * thread
   | Label of thread * string
+  | Switch of thread
   with sexp
 
 type t = {
@@ -26,6 +27,7 @@ let print_event t =
   | Resolves (a, b) -> printf "[%.1f] %a resolves %a\n" t.time fmt a fmt b
   | Becomes (a, b) -> printf "[%.1f] %a becomes %a\n" t.time fmt a fmt b
   | Label (a, b) -> printf "[%.1f] %a: %s\n" t.time fmt a b
+  | Switch a -> printf "[%.1f] switch to %a\n" t.time fmt a
 
 let event_log : t list ref = ref []
 

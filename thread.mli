@@ -20,6 +20,9 @@ val label : t -> string option
 (** Interactions initiated by this thread (reverse order) *)
 val interactions : t -> (time * interaction * t) list
 
+(** Return the times when the thread was running. *)
+val activations : t -> (time * time) list
+
 (** Parse a trace file, returning the root thread. *)
 val from_channel : in_channel -> t
 

@@ -12,6 +12,7 @@ type t = {
   mutable becomes : t option;
   mutable label : string option;
   mutable interactions : (time * interaction * t) list;
+  mutable activations : (time * time) list;
   mutable y : float;
 }
 
@@ -23,6 +24,7 @@ let make_thread ~tid ~start_time = {
   becomes = None;
   label = None;
   interactions = [];
+  activations = [];
   y = 0.0;
 }
 
@@ -47,6 +49,17 @@ let from_channel ch =
   let get_thread id =
     try Hashtbl.find threads id |> replacement
     with Not_found -> top_thread in
+
+  let running_thread = ref None in
+  let switch time next =
+    begin match !running_thread with
+    | Some (start_time, prev) ->
+        let end_time = min time (prev.end_time) in
+        prev.activations <- (start_time, end_time) :: prev.activations
+    | None -> () end;
+    match next with
+    | Some next -> running_thread := Some (time, next)
+    | None -> running_thread := None in
 
   events |> List.iter (fun sexp ->
     let open Event in
@@ -76,7 +89,10 @@ let from_channel ch =
         a.interactions <- (ev.time, Read, b) :: a.interactions;
     | Label (a, msg) ->
         if a <> -1 then (get_thread a).label <- Some msg
+    | Switch a ->
+        switch ev.time (Some (get_thread a))
   );
+  switch top_thread.end_time None;
   top_thread |> iter (fun t ->
     if t.end_time = infinity then t.end_time <- top_thread.end_time;
   );
@@ -88,6 +104,7 @@ let creates t = t.creates
 let becomes t = t.becomes
 let label t = t.label
 let interactions t = t.interactions
+let activations t = t.activations
 let y t = t.y
 let id t = t.tid
 
