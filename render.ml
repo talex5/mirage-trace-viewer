@@ -164,6 +164,16 @@ let render top_thread =
     Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
     Cairo.paint cr;
 
+    (* When the system thread is "active", the system is idle. *)
+    Cairo.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
+    let bottom = Gdk.Rectangle.(y expose_area + height expose_area) |> float_of_int in
+    Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
+      let start_x = clip_x_of_time start_time in
+      let end_x = clip_x_of_time end_time in
+      Cairo.rectangle cr ~x:start_x ~y:0.0 ~w:(end_x -. start_x) ~h:bottom;
+      Cairo.fill cr;
+    );
+
     Cairo.set_font_size cr 12.;
     Cairo.select_font_face cr "Sans";
 

@@ -41,6 +41,7 @@ let from_channel ch =
     | [] -> failwith "No events!"
     | hd :: _ -> Event.((t_of_sexp hd).time) in
   let top_thread = make_thread ~start_time ~tid:(-1) in
+  top_thread.end_time <- 0.0;
 
   let rec replacement thread =
     match thread.becomes with
@@ -48,9 +49,14 @@ let from_channel ch =
     | Some t2 -> replacement t2 in
 
   let threads = Hashtbl.create 100 in
-  let get_thread id =
-    try Hashtbl.find threads id |> replacement
-    with Not_found -> top_thread in
+  Hashtbl.add threads (-1) top_thread;
+  let get_thread tid =
+    try Hashtbl.find threads tid |> replacement
+    with Not_found ->
+      let t = make_thread ~tid ~start_time:0.0 in
+      Hashtbl.add threads tid t;
+      top_thread.creates <- t :: top_thread.creates;
+      t in
 
   let running_thread = ref None in
   let switch time next =
