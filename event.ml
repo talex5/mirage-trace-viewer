@@ -7,7 +7,7 @@ type thread = int with sexp
 type op = 
   | Creates of thread * thread
   | Reads of thread * thread
-  | Resolves of thread * thread * bool
+  | Resolves of thread * thread * string option
   | Becomes of thread * thread
   | Label of thread * string
   | Switch of thread

@@ -17,7 +17,8 @@ val becomes : t -> t option
 
 val label : t -> string option
 
-val failed : t -> bool
+(** If the thread failed, the string of the exception. *)
+val failure : t -> string option
 
 (** Interactions initiated by this thread (reverse order) *)
 val interactions : t -> (time * interaction * t) list

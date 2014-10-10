@@ -145,7 +145,10 @@ let render top_thread =
       | Thread.Read ->
           let end_time = min time (Thread.end_time other) in
           thin cr;
-          arrow cr other end_time t time (0.0, 0.0, 1.0)
+          let colour =
+            if Thread.failure other <> None then (0.8, 0.0, 0.0)
+            else (0.0, 0.0, 1.0) in
+          arrow cr other end_time t time colour
       | Thread.Resolve ->
           if Thread.id t <> -1 then (
             let start_time = time
@@ -198,7 +201,7 @@ let render top_thread =
         Cairo.line_to cr ~x:(min visible_x_max (clip_x_of_time end_time)) ~y;
         Cairo.stroke cr;
       );
-      if Thread.failed t then (
+      if Thread.failure t <> None then (
         failed cr;
         let x = clip_x_of_time (Thread.end_time t) in
         Cairo.move_to cr ~x ~y:(y -. 8.);
@@ -213,12 +216,17 @@ let render top_thread =
       let t = i.Interval_tree.Interval.value in
       let start_x = x_of_start t +. 2. in
       let end_x = x_of_end t in
+      let y = y_of_thread t in
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
         let msg =
           match Thread.label t with
           | None -> string_of_int (Thread.id t)
           | Some label -> label in
+        let msg =
+          match Thread.failure t with
+          | None -> msg
+          | Some failure -> msg ^ " ->  " ^ failure in
         thread_label cr;
 
         let text_width = Cairo.((text_extents cr msg).x_advance) in
@@ -227,7 +235,7 @@ let render top_thread =
           Cairo.save cr;
           Cairo.rectangle cr ~x ~y:0.0 ~w:(end_x -. x) ~h:max_y;
           Cairo.clip cr;
-          Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
+          Cairo.move_to cr ~x ~y:(y -. 3.);
           Cairo.show_text cr msg;
           Cairo.restore cr;
         ) else (
@@ -235,10 +243,10 @@ let render top_thread =
           let x =
             if start_x < 4.0 then min 4.0 (end_x -. text_width)
             else start_x in
-          Cairo.move_to cr ~x ~y:(y_of_thread t -. 3.);
+          Cairo.move_to cr ~x ~y:(y -. 3.);
           Cairo.show_text cr msg;
-        )
-      );
+        );
+      )
     );
 
     true
