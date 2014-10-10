@@ -6,7 +6,7 @@ let fold ~init fn thread =
   let rec aux acc t =
     let acc = fn acc t in
     List.fold_left aux acc (Thread.creates t) in
-  aux init thread
+  Thread.creates thread |> List.fold_left aux init
 
 exception Found_gap
 
