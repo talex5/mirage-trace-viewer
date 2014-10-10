@@ -13,6 +13,7 @@ type t = {
   mutable label : string option;
   mutable interactions : (time * interaction * t) list;
   mutable activations : (time * time) list;
+  mutable failed : bool;
   mutable y : float;
 }
 
@@ -25,6 +26,7 @@ let make_thread ~tid ~start_time = {
   label = None;
   interactions = [];
   activations = [];
+  failed = false;
   y = 0.0;
 }
 
@@ -73,10 +75,11 @@ let from_channel ch =
         let child = make_thread ~start_time:ev.time ~tid:b in
         Hashtbl.add threads b child;
         a.creates <- child :: a.creates
-    | Resolves (a, b) ->
+    | Resolves (a, b, success) ->
         let a = get_thread a in
         let b = get_thread b in
         a.interactions <- (ev.time, Resolve, b) :: a.interactions;
+        b.failed <- not success;
         b.end_time <- ev.time
     | Becomes (a, b) ->
         let a = get_thread a in
@@ -86,6 +89,7 @@ let from_channel ch =
     | Reads (a, b) ->
         let a = get_thread a in
         let b = get_thread b in
+        switch ev.time (Some a);
         a.interactions <- (ev.time, Read, b) :: a.interactions;
     | Label (a, msg) ->
         if a <> -1 then (get_thread a).label <- Some msg
@@ -105,6 +109,7 @@ let becomes t = t.becomes
 let label t = t.label
 let interactions t = t.interactions
 let activations t = t.activations
+let failed t = t.failed
 let y t = t.y
 let id t = t.tid
 

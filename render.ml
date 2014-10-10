@@ -42,6 +42,10 @@ let named_thread cr =
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
 
+let failed cr =
+  Cairo.set_line_width cr 2.0;
+  Cairo.set_source_rgb cr ~r:0.8 ~g:0.0 ~b:0.0
+
 let activation cr =
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
@@ -173,12 +177,13 @@ let render top_thread =
     let visible_threads = Layout.IT.overlapping_interval layout (visible_t_min, visible_t_max) in
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
+      let y = y_of_thread t in
       if Thread.label t <> None then
         named_thread cr
       else
         anonymous_thread cr;
-      Cairo.move_to cr ~x:(max visible_x_min (x_of_start t)) ~y:(y_of_thread t);
-      Cairo.line_to cr ~x:(min visible_x_max (x_of_end t)) ~y:(y_of_thread t);
+      Cairo.move_to cr ~x:(max visible_x_min (x_of_start t)) ~y;
+      Cairo.line_to cr ~x:(min visible_x_max (x_of_end t)) ~y;
       Cairo.stroke cr;
       Thread.creates t |> List.iter (fun child ->
         line cr (Thread.start_time child) t child anonymous_thread
@@ -189,10 +194,17 @@ let render top_thread =
           line cr (Thread.end_time t) t child anonymous_thread end;
       activation cr;
       Thread.activations t |> List.iter (fun (start_time, end_time) ->
-        Cairo.move_to cr ~x:(max visible_x_min (clip_x_of_time start_time)) ~y:(y_of_thread t);
-        Cairo.line_to cr ~x:(min visible_x_max (clip_x_of_time end_time)) ~y:(y_of_thread t);
+        Cairo.move_to cr ~x:(max visible_x_min (clip_x_of_time start_time)) ~y;
+        Cairo.line_to cr ~x:(min visible_x_max (clip_x_of_time end_time)) ~y;
         Cairo.stroke cr;
       );
+      if Thread.failed t then (
+        failed cr;
+        let x = clip_x_of_time (Thread.end_time t) in
+        Cairo.move_to cr ~x ~y:(y -. 8.);
+        Cairo.line_to cr ~x ~y:(y +. 8.);
+        Cairo.stroke cr;
+      )
     );
 
     top_thread |> Thread.iter (draw_interactions cr);
