@@ -3,6 +3,8 @@
 let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
   ignore (signal ~callback)
 
+module R = Render.Make(Cairo)
+
 let make top_thread =
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
@@ -37,10 +39,14 @@ let make top_thread =
 
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
+    Cairo.set_font_size cr 12.;
+    Cairo.select_font_face cr "Sans";
+    Cairo.set_line_join cr Cairo.JOIN_BEVEL;
+
     let expose_area = GdkEvent.Expose.area ev in
     let x, y = Gdk.Rectangle.(x expose_area, y expose_area) in
     let width, height = Gdk.Rectangle.(width expose_area, height expose_area) in
-    Render.render v cr ~expose_area:(
+    R.render v cr ~expose_area:(
       (float_of_int x, float_of_int y),
       (float_of_int (x + width), float_of_int (y + height))
     );
