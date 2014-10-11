@@ -28,6 +28,7 @@ val activations : t -> (time * time) list
 
 (** Parse a trace file, returning the root thread. *)
 val from_channel : in_channel -> t
+val of_sexp : Sexplib.Sexp.t list -> t
 
 val set_y : t -> float -> unit
 val y : t -> float

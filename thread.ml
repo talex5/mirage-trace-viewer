@@ -34,8 +34,7 @@ let rec iter fn thread =
   fn thread;
   thread.creates |> List.iter (iter fn)
 
-let from_channel ch =
-  let events = Sexplib.Sexp.input_sexps ch in
+let of_sexp events =
   let start_time =
     match events with
     | [] -> failwith "No events!"
@@ -126,3 +125,6 @@ let compare a b =
   match compare a.y b.y with
   | 0 -> compare a.tid b.tid
   | r -> r
+
+let from_channel ch =
+  Sexplib.Sexp.input_sexps ch |> of_sexp

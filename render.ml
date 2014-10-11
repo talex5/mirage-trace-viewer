@@ -21,12 +21,8 @@ module type CANVAS = sig
   val stroke_preserve : context -> unit
   val fill : context -> unit
   val text_extents : context -> string -> text_extents
-  val show_text : context -> string -> unit
+  val paint_text : context -> ?clip_area:(float * float) -> x:float -> y:float -> string -> unit
   val paint : ?alpha:float -> context -> unit
-
-  val save : context -> unit
-  val clip : context -> unit
-  val restore : context -> unit
 end
 
 module Make (C : CANVAS) = struct
@@ -51,7 +47,7 @@ module Make (C : CANVAS) = struct
     C.set_source_rgb cr ~r:0.8 ~g:0.0 ~b:0.0
 
   let activation cr =
-    C.set_line_width cr 2.0;
+    C.set_line_width cr 3.0;
     C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
 
   let line v cr time src recv colour =
@@ -114,8 +110,7 @@ module Make (C : CANVAS) = struct
       else Printf.sprintf "Each grid division: %.2g s" grid_step in
     let extents = C.text_extents cr msg in
     let y = bottom +. C.(extents.y_bearing -. extents.height) -. 2.0 in
-    C.move_to cr ~x:4.0 ~y;
-    C.show_text cr msg
+    C.paint_text cr ~x:4.0 ~y msg
 
   let render v cr ~expose_area =
     let top_thread = v.View.top_thread in
@@ -196,7 +191,7 @@ module Make (C : CANVAS) = struct
       let t = i.Interval_tree.Interval.value in
       let start_x = View.x_of_start v t +. 2. in
       let end_x = View.x_of_end v t in
-      let y = View.y_of_thread v t in
+      let y = View.y_of_thread v t -. 3.0 in
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
         let msg =
@@ -212,19 +207,13 @@ module Make (C : CANVAS) = struct
         let text_width = C.((text_extents cr msg).x_advance) in
         if text_width > thread_width then (
           let x = start_x in
-          C.save cr;
-          C.rectangle cr ~x ~y:0.0 ~w:(end_x -. x) ~h:v.View.height;
-          C.clip cr;
-          C.move_to cr ~x ~y:(y -. 3.);
-          C.show_text cr msg;
-          C.restore cr;
+          C.paint_text cr ~x ~y ~clip_area:(end_x -. x, v.View.height) msg
         ) else (
           (* Show label on left margin if the thread starts off-screen *)
           let x =
             if start_x < 4.0 then min 4.0 (end_x -. text_width)
             else start_x in
-          C.move_to cr ~x ~y:(y -. 3.);
-          C.show_text cr msg;
+          C.paint_text cr ~x ~y msg
         );
       )
     )

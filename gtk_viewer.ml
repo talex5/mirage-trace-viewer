@@ -3,7 +3,24 @@
 let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
   ignore (signal ~callback)
 
-module R = Render.Make(Cairo)
+module Canvas = struct
+  include Cairo
+
+  let paint_text cr ?clip_area ~x ~y msg =
+    match clip_area with
+    | None ->
+        move_to cr ~x ~y;
+        show_text cr msg
+    | Some (w, h) ->
+        save cr;
+        rectangle cr ~x ~y:0.0 ~w ~h;
+        clip cr;
+        move_to cr ~x ~y;
+        show_text cr msg;
+        restore cr
+end
+
+module R = Render.Make(Canvas)
 
 let make top_thread =
   GMain.init () |> ignore;
@@ -109,3 +126,17 @@ let make top_thread =
     set_view_y vadjustment#value;
     GtkBase.Widget.queue_draw area#as_widget
   )
+
+let () =
+  let trace_file =
+    match Sys.argv with
+    | [| _prog |] -> "log.sexp"
+    | [| _prog; path |] -> path
+    | _ -> assert false in
+  let ch = open_in trace_file in
+  let trace = Thread.from_channel ch in
+  close_in ch;
+
+  make trace;
+
+  GMain.Main.main ()
