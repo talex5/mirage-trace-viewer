@@ -1,3 +1,4 @@
-true: warn(A-4), strict_sequence, package(lwt,lwt.unix,extlib,itv-tree,sexplib,lablgtk2,cairo2.lablgtk2)
+true: warn(A-4), strict_sequence, package(lwt,lwt.unix,extlib,itv-tree,sexplib)
 <event.*>: syntax(camlp4o), package(sexplib.syntax)
 true: package(cairo2)
+<viewer.*> or <gtk_viewer.ml>:package(lablgtk2,cairo2.lablgtk2)
