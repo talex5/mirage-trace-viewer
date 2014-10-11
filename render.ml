@@ -1,8 +1,5 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
-  ignore (signal ~callback)
-
 let arrow_width = 4.
 let arrow_height = 10.
 
@@ -59,17 +56,16 @@ let arrow v cr src src_time recv recv_time (r, g, b) =
     )
   )
 
-let draw_grid v cr area =
+let draw_grid v cr area_start_x area_end_x =
   Cairo.set_line_width cr 1.0;
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
 
   let grid_step = v.View.grid_step in
-  let top = Gdk.Rectangle.(y area) |> float_of_int in
-  let bottom = Gdk.Rectangle.(y area + height area) |> float_of_int in
+  let top = -. View.margin in
+  let bottom = View.(v.view_height +. margin) in
 
-  let area_start_time = View.time_of_x v (float_of_int (Gdk.Rectangle.(x area))) in
+  let area_start_time = View.time_of_x v area_start_x in
   let grid_start_x = floor (area_start_time /. grid_step) *. grid_step |> View.x_of_time v in
-  let area_end_x = Gdk.Rectangle.(x area + width area) |> float_of_int in
   let grid_step_x = View.width_of_timespan v grid_step in
   let rec draw x =
     if x < area_end_x then (
@@ -79,7 +75,6 @@ let draw_grid v cr area =
       draw (x +. grid_step_x)
     ) in
   draw grid_start_x;
-  Cairo.move_to cr ~x:4.0 ~y:(bottom -. 4.);
   Cairo.set_source_rgb cr ~r:0.4 ~g:0.4 ~b:0.4;
   let msg =
     if grid_step >= 1.0 then Printf.sprintf "Each grid division: %.f s" grid_step
@@ -87,6 +82,9 @@ let draw_grid v cr area =
     else if grid_step >= 0.000_001 then Printf.sprintf "Each grid division: %.f us" (grid_step *. 1_000_000.)
     else if grid_step >= 0.000_000_001 then Printf.sprintf "Each grid division: %.f ns" (grid_step *. 1_000_000_000.)
     else Printf.sprintf "Each grid division: %.2g s" grid_step in
+  let extents = Cairo.text_extents cr msg in
+  let y = bottom +. Cairo.(extents.y_bearing -. extents.height) -. 2.0 in
+  Cairo.move_to cr ~x:4.0 ~y;
   Cairo.show_text cr msg
 
 let render v cr expose_area =
@@ -108,7 +106,9 @@ let render v cr expose_area =
   Cairo.set_font_size cr 12.;
   Cairo.select_font_face cr "Sans";
 
-  draw_grid v cr expose_area;
+  draw_grid v cr
+    (float_of_int (Gdk.Rectangle.(x expose_area)))
+    (float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)));
 
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
