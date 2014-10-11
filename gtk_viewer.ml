@@ -38,7 +38,12 @@ let make top_thread =
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
     let expose_area = GdkEvent.Expose.area ev in
-    Render.render v cr expose_area;
+    let x, y = Gdk.Rectangle.(x expose_area, y expose_area) in
+    let width, height = Gdk.Rectangle.(width expose_area, height expose_area) in
+    Render.render v cr ~expose_area:(
+      (float_of_int x, float_of_int y),
+      (float_of_int (x + width), float_of_int (y + height))
+    );
     true
   );
 

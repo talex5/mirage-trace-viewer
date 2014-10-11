@@ -87,37 +87,33 @@ let draw_grid v cr area_start_x area_end_x =
   Cairo.move_to cr ~x:4.0 ~y;
   Cairo.show_text cr msg
 
-let render v cr expose_area =
+let render v cr ~expose_area =
   let top_thread = v.View.top_thread in
+  let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
 
   Cairo.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
   Cairo.paint cr;
 
   (* When the system thread is "active", the system is idle. *)
   Cairo.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
-  let bottom = Gdk.Rectangle.(y expose_area + height expose_area) |> float_of_int in
   Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
     let start_x = View.clip_x_of_time v start_time in
     let end_x = View.clip_x_of_time v end_time in
-    Cairo.rectangle cr ~x:start_x ~y:0.0 ~w:(end_x -. start_x) ~h:bottom;
+    Cairo.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
     Cairo.fill cr;
   );
 
   Cairo.set_font_size cr 12.;
   Cairo.select_font_face cr "Sans";
 
-  draw_grid v cr
-    (float_of_int (Gdk.Rectangle.(x expose_area)))
-    (float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)));
+  draw_grid v cr expose_min_x expose_max_x;
 
   Cairo.set_line_width cr 2.0;
   Cairo.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
   Cairo.set_line_join cr Cairo.JOIN_BEVEL;
 
-  let visible_x_min = float_of_int (Gdk.Rectangle.x expose_area) in
-  let visible_x_max = float_of_int (Gdk.Rectangle.(x expose_area + width expose_area)) in
-  let visible_t_min = View.time_of_x v visible_x_min in
-  let visible_t_max = View.time_of_x v visible_x_max in
+  let visible_t_min = View.time_of_x v expose_min_x in
+  let visible_t_max = View.time_of_x v expose_max_x in
   let visible_threads = View.visible_threads v (visible_t_min, visible_t_max) in
   visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
     let t = i.Interval_tree.Interval.value in
@@ -126,8 +122,8 @@ let render v cr expose_area =
       named_thread cr
     else
       anonymous_thread cr;
-    Cairo.move_to cr ~x:(max visible_x_min (View.x_of_start v t)) ~y;
-    Cairo.line_to cr ~x:(min visible_x_max (View.x_of_end v t)) ~y;
+    Cairo.move_to cr ~x:(max expose_min_x (View.x_of_start v t)) ~y;
+    Cairo.line_to cr ~x:(min expose_max_x (View.x_of_end v t)) ~y;
     Cairo.stroke cr;
     Thread.creates t |> List.iter (fun child ->
       line v cr (Thread.start_time child) t child anonymous_thread
@@ -138,8 +134,8 @@ let render v cr expose_area =
         line v cr (Thread.end_time t) t child anonymous_thread end;
     activation cr;
     Thread.activations t |> List.iter (fun (start_time, end_time) ->
-      Cairo.move_to cr ~x:(max visible_x_min (View.clip_x_of_time v start_time)) ~y;
-      Cairo.line_to cr ~x:(min visible_x_max (View.clip_x_of_time v end_time)) ~y;
+      Cairo.move_to cr ~x:(max expose_min_x (View.clip_x_of_time v start_time)) ~y;
+      Cairo.line_to cr ~x:(min expose_max_x (View.clip_x_of_time v end_time)) ~y;
       Cairo.stroke cr;
     );
     if Thread.failure t <> None then (
