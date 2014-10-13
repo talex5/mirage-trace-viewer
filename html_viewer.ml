@@ -133,11 +133,41 @@ let zoom c (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
   render c;
   Js._false
 
+let motion_id = ref None
+
+let mouse_up _ev =
+  begin match !motion_id with
+  | None -> ()
+  | Some id -> Dom_html.removeEventListener id; motion_id := None end;
+  Js._false
+
+let mouse_down c (ev:Dom_html.mouseEvent Js.t) =
+  let start_time = View.time_of_x v (float_of_int ev##clientX) in
+  let start_y = float_of_int ev##clientY in
+
+  let motion (ev:Dom_html.mouseEvent Js.t) =
+    let x = float_of_int ev##clientX in
+    let y = float_of_int ev##clientY in
+    let time_at_pointer = View.time_of_x v x in
+    if time_at_pointer <> start_time || start_y <> y then (
+      View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
+      View.set_view_y v (start_y -. y) |> ignore;
+    );
+    render c;
+    Js._false in
+
+  let _ = mouse_up () in
+  motion_id := Some (Dom_html.addEventListener c Dom_html.Event.mousemove (Dom_html.handler motion) (Js._true));
+  Js._false
+
 let () =
   let c =
     match Dom_html.tagged (Dom_html.getElementById "canvas") with
     | Dom_html.Canvas c -> c
     | _ -> assert false in
   Dom_html.addMousewheelEventListener c (zoom c) (Js.bool true) |> ignore;
+  c##onmousedown <- Dom_html.handler (mouse_down c);
+  c##onmouseup <- Dom_html.handler mouse_up;
+  c##onmouseout <- Dom_html.handler mouse_up;
   Dom_html.window##onload <- Dom_html.handler (main c);
   Dom_html.window##onresize <- Dom_html.handler (main c)
