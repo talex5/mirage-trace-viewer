@@ -70,6 +70,7 @@ end
 module R = Render.Make(Canvas)
 
 let events = Event.([
+  {time = 8249.521266; op = Creates (-1, 0)};
   {time = 8249.521266; op = Switch 0};
   {time = 8249.521280; op = Reads (0, -1)};
   {time = 8249.521297; op = Label (0, "XenStore")};
@@ -98,6 +99,7 @@ let events = Event.([
   {time = 8249.521567; op = Creates (0, 11)};
   {time = 8249.521576; op = Creates (0, 12)};
   {time = 8249.521584; op = Label (12, "blkfront.enumerate")};
+  {time = 8249.521584; op = Resolves (0, 0, None)};
 ])
 
 let top_thread = Thread.of_sexp (List.map Event.sexp_of_t events)
