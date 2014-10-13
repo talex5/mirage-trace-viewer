@@ -56,10 +56,11 @@ module Canvas = struct
       | None -> context##fillText (Js.string msg, x, y)
       | Some (w, h) ->
           context##save ();
-          context##rect (x, y, w, h);
+          context##rect (x, y -. font_size, w, h +. font_size);
           context##clip ();
           context##fillText (Js.string msg, x, y);
-          context##restore ()
+          context##restore ();
+          context##beginPath ()
 
   let paint ?alpha (context:context) =
     let c = context##canvas in
@@ -77,10 +78,16 @@ let top_thread =
 
 let v = View.make ~top_thread ~view_width:640. ~view_height:480.
 
-let render c =
+let render_now c =
+  let t0 = Unix.gettimeofday () in
   let ctx = c##getContext(Dom_html._2d_) in
   ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height))
+  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
+  let t1 = Unix.gettimeofday () in
+  Printf.printf "Render time: %.2f\n" (t1 -. t0)
+
+let render c =
+  Dom_html._requestAnimationFrame (Js.wrap_callback (fun _ev -> render_now c))
 
 let main c _ =
   let view_width = c##clientWidth in

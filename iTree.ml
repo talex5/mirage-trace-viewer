@@ -41,24 +41,11 @@ module Make(Value : Set.OrderedType) = struct
       by_point = Interval_tree.create intervals;
     }
 
-  (* The number of items at the start of the array for which [pred item] is false.
-   * The array must be sorted so that the first part is all false and the second all true. *)
-  let count_before pred arr =
-    let rec loop lo hi =
-      (* Answer is at least [lo] and at most [hi]. *)
-      if hi = lo then lo
-      else (
-        let mid = (lo + hi) / 2 in
-        if pred arr.(mid) then loop lo mid
-        else loop (mid + 1) hi
-      ) in
-    loop 0 (Array.length arr)
-
   (* Extend [acc] with intervals from the sorted array [intervals] from the
    * index where [test_start interval] is true until [test_end interval] is false. *)
   let add_range intervals test_start test_end acc =
     let l = Array.length intervals in
-    let first = intervals |> count_before (fun i2 -> test_start i2) in
+    let first = intervals |> Sorted_array.count_before (fun i2 -> test_start i2) in
     let rec collect acc i =
       if i = l then acc
       else (

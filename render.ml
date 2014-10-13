@@ -73,11 +73,13 @@ module Make (C : CANVAS) = struct
           else recv_y +. arrow_height in
         let x = View.clip_x_of_time v recv_time in
         C.line_to cr ~x ~y:arrow_head_y;
+        C.stroke cr;
+
+        C.move_to cr ~x ~y:arrow_head_y;
         C.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
         C.line_to cr ~x ~y:recv_y;
         C.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
         C.line_to cr ~x ~y:arrow_head_y;
-        C.stroke_preserve cr;
         C.fill cr
       )
     )
@@ -124,8 +126,10 @@ module Make (C : CANVAS) = struct
     Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
       let start_x = View.clip_x_of_time v start_time in
       let end_x = View.clip_x_of_time v end_time in
-      C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
-      C.fill cr;
+      if end_x >= expose_min_x && start_x < expose_max_x then (
+        C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
+        C.fill cr;
+      )
     );
 
     draw_grid v cr expose_min_x expose_max_x;
@@ -168,23 +172,23 @@ module Make (C : CANVAS) = struct
       )
     );
 
-    top_thread |> Thread.iter (fun t ->
-      Thread.interactions t |> List.iter (fun (time, op, other) ->
-        match op with
-        | Thread.Read ->
-            let end_time = min time (Thread.end_time other) in
-            thin cr;
-            let colour =
-              if Thread.failure other <> None then (0.8, 0.0, 0.0)
-              else (0.0, 0.0, 1.0) in
-            arrow v cr other end_time t time colour
-        | Thread.Resolve ->
-            if Thread.id t <> -1 then (
-              let start_time = time
-                |> min (Thread.end_time t) in
-              arrow v cr t start_time other time (0.0, 0.5, 0.0)
-            )
-      )
+    (* Arrows that are only just off screen can still be visible, so extend the
+     * window slightly. Once we get wider than a screen width, they become invisible anyway. *)
+    let view_timespace = View.timespan_of_width v v.View.view_width in
+    let vis_arrows_min = visible_t_min -. view_timespace in
+    let vis_arrows_max = visible_t_max +. view_timespace in
+    thin cr;
+    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+      match op with
+      | Thread.Read ->
+          let colour =
+            if Thread.failure other <> None then (0.8, 0.0, 0.0)
+            else (0.0, 0.0, 1.0) in
+          arrow v cr other end_time t start_time colour
+      | Thread.Resolve ->
+          if Thread.id t <> -1 then (
+            arrow v cr t start_time other end_time (0.0, 0.5, 0.0)
+          )
     );
 
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
