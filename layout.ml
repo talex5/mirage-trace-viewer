@@ -27,7 +27,7 @@ let arrange top_thread =
     let overlaps = IT.overlapping_interval layout (Thread.start_time t, Thread.end_time t) in
     let p_interval = {Interval_tree.Interval.lbound = Thread.start_time parent; rbound = Thread.end_time parent; value = parent} in
     let _, overlap_parent, below_parent = overlaps |> IT.IntervalSet.split p_interval in
-    let y = ref (max 0.0 (Thread.y parent)) in
+    let y = ref (max 0.5 (Thread.y parent)) in
     begin match Thread.becomes parent with
     | Some child when child == t -> ()
     | _ -> if overlap_parent && parent != top_thread then y := !y +. 30. end;
