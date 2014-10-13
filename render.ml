@@ -88,7 +88,7 @@ module Make (C : CANVAS) = struct
 
     let grid_step = v.View.grid_step in
     let top = -. View.margin in
-    let bottom = View.(v.view_height +. margin) in
+    let bottom = v.View.view_height in
 
     let area_start_time = View.time_of_x v area_start_x in
     let grid_start_x = floor (area_start_time /. grid_step) *. grid_step |> View.x_of_time v in
@@ -109,7 +109,7 @@ module Make (C : CANVAS) = struct
       else if grid_step >= 0.000_000_001 then Printf.sprintf "Each grid division: %.f ns" (grid_step *. 1_000_000_000.)
       else Printf.sprintf "Each grid division: %.2g s" grid_step in
     let extents = C.text_extents cr msg in
-    let y = bottom +. C.(extents.y_bearing -. extents.height) -. 2.0 in
+    let y = bottom -. C.(extents.height +. extents.y_bearing) -. 2.0 in
     C.paint_text cr ~x:4.0 ~y msg
 
   let render v cr ~expose_area =
