@@ -69,40 +69,11 @@ end
 
 module R = Render.Make(Canvas)
 
-let events = Event.([
-  {time = 8249.521266; op = Creates (-1, 0)};
-  {time = 8249.521266; op = Switch 0};
-  {time = 8249.521280; op = Reads (0, -1)};
-  {time = 8249.521297; op = Label (0, "XenStore")};
-  {time = 8249.521306; op = Reads (0, 0)};
-  {time = 8249.521319; op = Creates (0, 1)};
-  {time = 8249.521328; op = Creates (0, 2)};
-  {time = 8249.521337; op = Creates (0, 3)};
-  {time = 8249.521347; op = Label (3, "after-chn-1")};
-  {time = 8249.521357; op = Creates (0, 4)};
-  {time = 8249.521366; op = Creates (0, 5)};
-  {time = 8249.521375; op = Creates (0, 6)};
-  {time = 8249.521383; op = Creates (0, 7)};
-  {time = 8249.521392; op = Creates (0, 8)};
-  {time = 8249.521403; op = Creates (0, 9)};
-  {time = 8249.521412; op = Reads (0, 0)};
-  {time = 8249.521420; op = Reads (0, 0)};
-  {time = 8249.521429; op = Reads (0, -1)};
-  {time = 8249.521438; op = Reads (0, 0)};
-  {time = 8249.521449; op = Creates (0, 10)};
-  {time = 8249.521458; op = Reads (0, -1)};
-  {time = 8249.521467; op = Reads (0, 0)};
-  {time = 8249.521532; op = Reads (0, 0)};
-  {time = 8249.521541; op = Reads (0, 0)};
-  {time = 8249.521550; op = Reads (0, -1)};
-  {time = 8249.521558; op = Reads (0, 0)};
-  {time = 8249.521567; op = Creates (0, 11)};
-  {time = 8249.521576; op = Creates (0, 12)};
-  {time = 8249.521584; op = Label (12, "blkfront.enumerate")};
-  {time = 8249.521584; op = Resolves (0, 0, None)};
-])
-
-let top_thread = Thread.of_sexp (List.map Event.sexp_of_t events)
+let top_thread =
+  let ch = open_in "/static/log-x86.sexp" in
+  let top_thread = Thread.from_channel ch in
+  close_in ch;
+  top_thread
 
 let v = View.make ~top_thread ~view_width:640. ~view_height:480.
 
