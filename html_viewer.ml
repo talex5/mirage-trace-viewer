@@ -104,11 +104,12 @@ let top_thread = Thread.of_sexp (List.map Event.sexp_of_t events)
 
 let v = View.make ~top_thread ~view_width:640. ~view_height:480.
 
-let main _ =
-  let c =
-    match Dom_html.tagged (Dom_html.getElementById "canvas") with
-    | Dom_html.Canvas c -> c
-    | _ -> assert false in
+let render c =
+  let ctx = c##getContext(Dom_html._2d_) in
+  ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
+  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height))
+
+let main c _ =
   let view_width = c##clientWidth in
   let view_height = c##clientHeight in
   c##width <- view_width;
@@ -116,11 +117,27 @@ let main _ =
   let view_width = float_of_int view_width in
   let view_height = float_of_int view_height in
   View.set_size v view_width view_height;
-  let ctx = c##getContext(Dom_html._2d_) in
-  ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-  R.render v ctx ~expose_area:((0.0, 0.0), (view_width, view_height));
+  render c;
+  Js._false
+
+let zoom c (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
+  let x = float_of_int ev##clientX in
+  let t_at_pointer = View.time_of_x v x in
+
+  if dy < 0 then
+    View.set_scale v (v.View.scale *. 1.2)
+  else
+    View.set_scale v (v.View.scale /. 1.2);
+  let t_new_at_pointer = View.time_of_x v x in
+  let _hscroll = View.set_start_time v (v.View.view_start_time -. (t_new_at_pointer -. t_at_pointer)) in
+  render c;
   Js._false
 
 let () =
-  Dom_html.window ## onload <- Dom_html.handler main;
-  Dom_html.window ## onresize <- Dom_html.handler main
+  let c =
+    match Dom_html.tagged (Dom_html.getElementById "canvas") with
+    | Dom_html.Canvas c -> c
+    | _ -> assert false in
+  Dom_html.addMousewheelEventListener c (zoom c) (Js.bool true) |> ignore;
+  Dom_html.window##onload <- Dom_html.handler (main c);
+  Dom_html.window##onresize <- Dom_html.handler (main c)
