@@ -14,6 +14,8 @@ module type CANVAS = sig
   val set_line_width : context -> float -> unit
   val set_source_rgb : context -> r:float -> g:float -> b:float -> unit
   val set_source_rgba : context -> r:float -> g:float -> b:float -> a:float -> unit
+  (* (Cairo needs to know the r,g,b too) *)
+  val set_source_alpha : context -> r:float -> g:float -> b:float -> float -> unit
   val move_to : context -> x:float -> y:float -> unit
   val line_to : context -> x:float -> y:float -> unit
   val rectangle : context -> x:float -> y:float -> w:float -> h:float -> unit
@@ -50,8 +52,7 @@ module Make (C : CANVAS) = struct
     C.set_line_width cr 3.0;
     C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
 
-  let line v cr time src recv colour =
-    colour cr;
+  let line v cr time src recv =
     C.move_to cr ~x:(View.x_of_time v time) ~y:(View.y_of_thread v src);
     C.line_to cr ~x:(View.x_of_time v time) ~y:(View.y_of_thread v recv);
     C.stroke cr
@@ -60,7 +61,7 @@ module Make (C : CANVAS) = struct
     let width = View.width_of_timespan v (recv_time -. src_time) in
     let alpha = 1.0 -. (min 1.0 (width /. 6000.)) in
     if alpha > 0.01 then (
-      C.set_source_rgba cr ~r ~g ~b ~a:alpha;
+      C.set_source_alpha cr ~r ~g ~b alpha;
 
       if Thread.id src <> -1  && Thread.id src <> Thread.id recv then (
         let src_x = View.clip_x_of_time v src_time in
@@ -134,37 +135,46 @@ module Make (C : CANVAS) = struct
 
     draw_grid v cr expose_min_x expose_max_x;
 
-    C.set_line_width cr 2.0;
-    C.set_source_rgb cr ~r:1. ~g:1. ~b:1.;
+    (* Note: switching drawing colours is really slow with HTML canvas, so we try to group by colour. *)
 
     let visible_t_min = View.time_of_x v expose_min_x in
     let visible_t_max = View.time_of_x v expose_max_x in
     let visible_threads = View.visible_threads v (visible_t_min, visible_t_max) in
+    named_thread cr;
+    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    let t = i.Interval_tree.Interval.value in
+      let start_x = View.clip_x_of_time v (Thread.start_time t) in
+      let end_x = View.clip_x_of_time v (Thread.end_time t) in
+      let y = View.y_of_thread v t in
+      C.move_to cr ~x:start_x ~y;
+      C.line_to cr ~x:end_x ~y;
+      C.stroke cr;
+      Thread.creates t |> List.iter (fun child ->
+        let child_start_time = Thread.start_time child in
+        line v cr child_start_time t child
+      );
+      begin match Thread.becomes t with
+      | Some child when Thread.y child <> Thread.y t ->
+          line v cr (Thread.end_time t) t child
+      | _ -> () end;
+    );
+
+    activation cr;
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
       let y = View.y_of_thread v t in
-      if Thread.label t <> None then
-        named_thread cr
-      else
-        anonymous_thread cr;
-      C.move_to cr ~x:(max expose_min_x (View.x_of_start v t)) ~y;
-      C.line_to cr ~x:(min expose_max_x (View.x_of_end v t)) ~y;
-      C.stroke cr;
-      Thread.creates t |> List.iter (fun child ->
-        line v cr (Thread.start_time child) t child anonymous_thread
-      );
-      begin match Thread.becomes t with
-      | None -> ()
-      | Some child ->
-          line v cr (Thread.end_time t) t child anonymous_thread end;
-      activation cr;
       Thread.activations t |> List.iter (fun (start_time, end_time) ->
         C.move_to cr ~x:(max expose_min_x (View.clip_x_of_time v start_time)) ~y;
         C.line_to cr ~x:(min expose_max_x (View.clip_x_of_time v end_time)) ~y;
         C.stroke cr;
-      );
+      )
+    );
+
+    failed cr;
+    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+      let t = i.Interval_tree.Interval.value in
       if Thread.failure t <> None then (
-        failed cr;
+        let y = View.y_of_thread v t in
         let x = View.clip_x_of_time v (Thread.end_time t) in
         C.move_to cr ~x ~y:(y -. 8.);
         C.line_to cr ~x ~y:(y +. 8.);
@@ -178,17 +188,26 @@ module Make (C : CANVAS) = struct
     let vis_arrows_min = visible_t_min -. view_timespace in
     let vis_arrows_max = visible_t_max +. view_timespace in
     thin cr;
+    let c = (0.0, 0.0, 1.0) in
+    begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
     View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
       match op with
-      | Thread.Read ->
-          let colour =
-            if Thread.failure other <> None then (0.8, 0.0, 0.0)
-            else (0.0, 0.0, 1.0) in
-          arrow v cr other end_time t start_time colour
-      | Thread.Resolve ->
-          if Thread.id t <> -1 then (
-            arrow v cr t start_time other end_time (0.0, 0.5, 0.0)
-          )
+      | Thread.Read when Thread.failure other = None -> arrow v cr other end_time t start_time c
+      | _ -> ()
+    );
+    let c = (1.0, 0.0, 0.0) in
+    begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
+    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+      match op with
+      | Thread.Read when Thread.failure other <> None -> arrow v cr other end_time t start_time c
+      | _ -> ()
+    );
+    let c = (0.0, 0.5, 0.0) in
+    begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
+    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+      match op with
+      | Thread.Resolve when Thread.id t <> -1 -> arrow v cr t start_time other end_time c
+      | _ -> ()
     );
 
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->

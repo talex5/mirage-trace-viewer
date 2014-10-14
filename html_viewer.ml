@@ -17,13 +17,16 @@ module Canvas = struct
   let set_line_width context width = context##lineWidth <- width
 
   let set_source_rgba (context:context) ~r ~g ~b ~a =
-    let c = Printf.sprintf "rgba(%.f,%.f,%.f,%f)"
-        (r *. 255.)
-        (g *. 255.)
-        (b *. 255.)
-        a |> Js.string in
+    let c = Printf.sprintf "#%02x%02x%02x"
+      (r *. 255. |> truncate)
+      (g *. 255. |> truncate)
+      (b *. 255. |> truncate) |> Js.string in
+    context##globalAlpha <- a;
     context##fillStyle <- c;
     context##strokeStyle <- c
+
+  let set_source_alpha (context:context) ~r:_ ~g:_ ~b:_ a =
+    context##globalAlpha <- a
 
   let set_source_rgb (context:context) ~r ~g ~b = set_source_rgba context ~r ~g ~b ~a:1.0
 
@@ -52,15 +55,15 @@ module Canvas = struct
     }
 
   let paint_text (context:context) ?clip_area ~x ~y msg =
-      match clip_area with
-      | None -> context##fillText (Js.string msg, x, y)
-      | Some (w, h) ->
-          context##save ();
-          context##rect (x, y -. font_size, w, h +. font_size);
-          context##clip ();
-          context##fillText (Js.string msg, x, y);
-          context##restore ();
-          context##beginPath ()
+    match clip_area with
+    | None -> context##fillText (Js.string msg, x, y)
+    | Some (w, h) ->
+        context##save ();
+        context##rect (x, y -. font_size, w, h +. font_size);
+        context##clip ();
+        context##fillText (Js.string msg, x, y);
+        context##restore ();
+        context##beginPath ()
 
   let paint ?alpha (context:context) =
     let c = context##canvas in

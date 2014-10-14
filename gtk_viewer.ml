@@ -18,6 +18,8 @@ module Canvas = struct
         move_to cr ~x ~y;
         show_text cr msg;
         restore cr
+
+  let set_source_alpha cr ~r ~g ~b a = set_source_rgba cr ~r ~g ~b ~a
 end
 
 module R = Render.Make(Canvas)
