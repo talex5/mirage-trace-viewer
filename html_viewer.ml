@@ -79,17 +79,33 @@ let top_thread =
   close_in ch;
   top_thread
 
-let v = View.make ~top_thread ~view_width:640. ~view_height:480.
+let arg name =
+  let qname = "?" ^ name in
+  let _, v = Url.Current.arguments |> List.find (fun (k, _v) -> k = name || k = qname) in
+  v
+
+let v =
+  let v = View.make ~top_thread ~view_width:640. ~view_height:480. in
+  begin try
+    let t_min = arg "t_min" |> float_of_string in
+    let t_max = arg "t_max" |> float_of_string in
+    let scale = (v.View.view_width -. View.margin *. 2.) /. (t_max -. t_min) in
+    View.set_scale v scale;
+    View.set_start_time v t_min |> ignore
+  with Not_found -> print_endline "Not_found" end;
+  v
 
 let render_queued = ref false
 let render_now c =
   render_queued := false;
-  let t0 = Unix.gettimeofday () in
+  (* let t0 = Unix.gettimeofday () in *)
   let ctx = c##getContext(Dom_html._2d_) in
   ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
+  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height))
+  (* ;
   let t1 = Unix.gettimeofday () in
   Printf.printf "Render time: %.2f\n" (t1 -. t0)
+  *)
 
 let render c =
   if not (!render_queued) then (
@@ -148,12 +164,19 @@ let mouse_down c (ev:Dom_html.mouseEvent Js.t) =
   motion_id := Some (Dom_html.addEventListener c Dom_html.Event.mousemove (Dom_html.handler motion) (Js._true));
   Js._false
 
+let double_click _ev =
+  let t_min = v.View.view_start_time in
+  let t_max = t_min +. View.timespan_of_width v v.View.view_width in
+  Printf.printf "?t_min=%f&t_max=%f\n" t_min t_max;
+  Js._false
+
 let () =
   let c =
     match Dom_html.tagged (Dom_html.getElementById "canvas") with
     | Dom_html.Canvas c -> c
     | _ -> assert false in
   Dom_html.addMousewheelEventListener c (zoom c) (Js.bool true) |> ignore;
+  c##ondblclick <- Dom_html.handler double_click;
   c##onmousedown <- Dom_html.handler (mouse_down c);
   c##onmouseup <- Dom_html.handler mouse_up;
   c##onmouseout <- Dom_html.handler mouse_up;
