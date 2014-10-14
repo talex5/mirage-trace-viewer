@@ -78,7 +78,9 @@ let top_thread =
 
 let v = View.make ~top_thread ~view_width:640. ~view_height:480.
 
+let render_queued = ref false
 let render_now c =
+  render_queued := false;
   let t0 = Unix.gettimeofday () in
   let ctx = c##getContext(Dom_html._2d_) in
   ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
@@ -87,7 +89,10 @@ let render_now c =
   Printf.printf "Render time: %.2f\n" (t1 -. t0)
 
 let render c =
-  Dom_html._requestAnimationFrame (Js.wrap_callback (fun _ev -> render_now c))
+  if not (!render_queued) then (
+    Dom_html._requestAnimationFrame (Js.wrap_callback (fun _ev -> render_now c));
+    render_queued := true
+  )
 
 let main c _ =
   let view_width = c##clientWidth in
