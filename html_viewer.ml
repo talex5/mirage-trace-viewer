@@ -1,5 +1,7 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+let t0 = Unix.gettimeofday ()
+
 module Canvas = struct
   type context = Dom_html.canvasRenderingContext2D Js.t
 
@@ -73,19 +75,19 @@ end
 
 module R = Render.Make(Canvas)
 
-let top_thread =
-  let ch = open_in "/static/log-x86.sexp" in
-  let top_thread = Thread.from_channel ch in
-  close_in ch;
-  top_thread
-
 let arg name =
   let qname = "?" ^ name in
   let _, v = Url.Current.arguments |> List.find (fun (k, _v) -> k = name || k = qname) in
   v
 
 let v =
-  let v = View.make ~top_thread ~view_width:640. ~view_height:480. in
+  let t1 = Unix.gettimeofday () in
+  let ch = open_in "/static/log-x86.bin" in
+  let v = Marshal.from_channel ch in
+  close_in ch;
+  let t2 = Unix.gettimeofday () in
+  Printf.printf "Load time: %.2f\n" (t2 -. t1);
+  Printf.printf "Since startup: %.2f\n" (t2 -. t0);
   begin try
     let t_min = arg "t_min" |> float_of_string in
     let t_max = arg "t_max" |> float_of_string in
@@ -98,10 +100,12 @@ let v =
 let render_queued = ref false
 let render_now c =
   render_queued := false;
+  Printf.printf "render_now: %.2f\n" (Unix.gettimeofday () -. t0);
   (* let t0 = Unix.gettimeofday () in *)
   let ctx = c##getContext(Dom_html._2d_) in
   ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height))
+  R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
+  Printf.printf "render done: %.2f\n" (Unix.gettimeofday () -. t0)
   (* ;
   let t1 = Unix.gettimeofday () in
   Printf.printf "Render time: %.2f\n" (t1 -. t0)
