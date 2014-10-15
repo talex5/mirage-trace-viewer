@@ -160,8 +160,8 @@ let mouse_down c (ev:Dom_html.mouseEvent Js.t) =
     if time_at_pointer <> start_time || start_y <> y then (
       View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
       View.set_view_y v (start_y -. y) |> ignore;
+      render c;
     );
-    render c;
     Js._false in
 
   let _ = mouse_up () in
@@ -174,6 +174,45 @@ let double_click _ev =
   Printf.printf "?t_min=%f&t_max=%f\n" t_min t_max;
   Js._false
 
+type touch =
+  | Touch_none
+  | Touch_drag of (Thread.time * float)
+
+let touch = ref Touch_none
+let touch_start (ev:Dom_html.touchEvent Js.t) =
+  let new_touches = ev##touches in
+  begin match new_touches##length with
+  | 1 ->
+      let t = new_touches##item (0) in
+      Js.Optdef.case t (fun () -> ())
+        (fun t ->
+          touch := Touch_drag (View.time_of_x v (float_of_int t##clientX), float_of_int t##clientY)
+        )
+  | _ -> touch := Touch_none end;
+  Js._false
+
+let touch_move c (ev:Dom_html.touchEvent Js.t) =
+  begin match !touch with
+  | Touch_none -> ()
+  | Touch_drag (start_time, start_y) ->
+      let touches = ev##touches in
+      if touches##length = 1 then (
+        let t = touches##item (0) in
+        Js.Optdef.case t (fun () -> ())
+          (fun t ->
+            let x_new = float_of_int t##clientX in
+            let y_new = float_of_int t##clientY in
+            let t_new = View.x_of_time v x_new in
+            if t_new <> start_time || start_y <> y_new then (
+              View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
+              View.set_view_y v (start_y -. y_new) |> ignore;
+              render c;
+            )
+          )
+      )
+  end;
+  Js._false
+
 let () =
   let c =
     match Dom_html.tagged (Dom_html.getElementById "canvas") with
@@ -184,5 +223,9 @@ let () =
   c##onmousedown <- Dom_html.handler (mouse_down c);
   c##onmouseup <- Dom_html.handler mouse_up;
   c##onmouseout <- Dom_html.handler mouse_up;
+
+  Dom_html.addEventListener c Dom_html.Event.touchstart (Dom_html.handler touch_start) (Js.bool true) |> ignore;
+  Dom_html.addEventListener c Dom_html.Event.touchmove (Dom_html.handler (touch_move c)) (Js.bool true) |> ignore;
+
   Dom_html.window##onload <- Dom_html.handler (main c);
   Dom_html.window##onresize <- Dom_html.handler (main c)
