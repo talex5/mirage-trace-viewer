@@ -177,39 +177,48 @@ let double_click _ev =
 type touch =
   | Touch_none
   | Touch_drag of (Thread.time * float)
+  | Touch_zoom of (Thread.time * Thread.time)
+
+let touches ts =
+  let l = ts##length in
+  let rec aux acc i =
+    if i = l then List.rev acc else (
+    Js.Optdef.case (ts##item (i)) (fun () -> List.rev acc)
+      (fun t -> aux (t :: acc) (i + 1))
+    ) in
+  aux [] 0
 
 let touch = ref Touch_none
-let touch_start (ev:Dom_html.touchEvent Js.t) =
-  let new_touches = ev##touches in
-  begin match new_touches##length with
-  | 1 ->
-      let t = new_touches##item (0) in
-      Js.Optdef.case t (fun () -> ())
-        (fun t ->
-          touch := Touch_drag (View.time_of_x v (float_of_int t##clientX), float_of_int t##clientY)
-        )
+let touch_change (ev:Dom_html.touchEvent Js.t) =
+  Dom.preventDefault ev;
+  begin match touches ev##touches with
+  | [t] -> touch := Touch_drag (View.time_of_x v (float_of_int t##clientX), float_of_int t##clientY)
+  | [t0; t1] ->
+      touch := Touch_zoom (
+        (View.time_of_x v (float_of_int t0##clientX)),
+        (View.time_of_x v (float_of_int t1##clientX))
+      )
   | _ -> touch := Touch_none end;
   Js._false
 
 let touch_move c (ev:Dom_html.touchEvent Js.t) =
-  begin match !touch with
-  | Touch_none -> ()
-  | Touch_drag (start_time, start_y) ->
-      let touches = ev##touches in
-      if touches##length = 1 then (
-        let t = touches##item (0) in
-        Js.Optdef.case t (fun () -> ())
-          (fun t ->
-            let x_new = float_of_int t##clientX in
-            let y_new = float_of_int t##clientY in
-            let t_new = View.x_of_time v x_new in
-            if t_new <> start_time || start_y <> y_new then (
-              View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
-              View.set_view_y v (start_y -. y_new) |> ignore;
-              render c;
-            )
-          )
-      )
+  begin match !touch, touches ev##touches with
+  | Touch_drag (start_time, start_y), [touch] ->
+      let x_new = float_of_int touch##clientX in
+      let y_new = float_of_int touch##clientY in
+      let t_new = View.x_of_time v x_new in
+      if t_new <> start_time || start_y <> y_new then (
+        View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
+        View.set_view_y v (start_y -. y_new) |> ignore;
+        render c;
+        )
+  | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
+      let x0 = float_of_int touch0##clientX in
+      let x1 = float_of_int touch1##clientX in
+      View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
+      View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
+      render c;
+  | _ -> ()
   end;
   Js._false
 
@@ -224,8 +233,10 @@ let () =
   c##onmouseup <- Dom_html.handler mouse_up;
   c##onmouseout <- Dom_html.handler mouse_up;
 
-  Dom_html.addEventListener c Dom_html.Event.touchstart (Dom_html.handler touch_start) (Js.bool true) |> ignore;
+  Dom_html.addEventListener c Dom_html.Event.touchstart (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchmove (Dom_html.handler (touch_move c)) (Js.bool true) |> ignore;
+  Dom_html.addEventListener c Dom_html.Event.touchend (Dom_html.handler touch_change) (Js.bool true) |> ignore;
+  Dom_html.addEventListener c Dom_html.Event.touchcancel (Dom_html.handler touch_change) (Js.bool true) |> ignore;
 
   Dom_html.window##onload <- Dom_html.handler (main c);
   Dom_html.window##onresize <- Dom_html.handler (main c)
