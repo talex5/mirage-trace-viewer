@@ -15,7 +15,7 @@ val creates : t -> t list
 (** At this thread's end_time, it is not resolved, but merges with another thread. *)
 val becomes : t -> t option
 
-val label : t -> string option
+val labels : t -> (time * string) list
 
 (** If the thread failed, the string of the exception. *)
 val failure : t -> string option

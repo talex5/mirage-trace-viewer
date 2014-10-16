@@ -10,7 +10,7 @@ type t = {
   mutable end_time : time;
   mutable creates : t list;
   mutable becomes : t option;
-  mutable label : string option;
+  mutable labels : (time * string) list;
   mutable interactions : (time * interaction * t) list;
   mutable activations : (time * time) list;
   mutable failure : string option;
@@ -23,7 +23,7 @@ let make_thread ~tid ~start_time = {
   end_time = infinity;
   creates = [];
   becomes = None;
-  label = None;
+  labels = [];
   interactions = [];
   activations = [];
   failure = None;
@@ -104,18 +104,24 @@ let of_sexp events =
         switch ev.time (Some a);
         a.interactions <- (ev.time, Read, b) :: a.interactions;
     | Label (a, msg) ->
-        if a <> -1 then (get_thread a).label <- Some msg
+        if a <> -1 then (
+          let a = get_thread a in
+          a.labels <- (ev.time, msg) :: a.labels
+        )
     | Switch a ->
         switch ev.time (Some (get_thread a))
   );
   switch top_thread.end_time None;
+  top_thread |> iter (fun t ->
+    t.labels <- List.rev t.labels
+  );
   top_thread
 
 let start_time t = t.start_time
 let end_time t = t.end_time
 let creates t = t.creates
 let becomes t = t.becomes
-let label t = t.label
+let labels t = t.labels
 let interactions t = t.interactions
 let activations t = t.activations
 let failure t = t.failure

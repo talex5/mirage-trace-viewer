@@ -115,6 +115,43 @@ module Make (C : CANVAS) = struct
     let y = bottom -. C.(extents.height +. extents.y_bearing) -. 2.0 in
     C.paint_text cr ~x:4.0 ~y msg
 
+  (** Draw [msg] in the area (min_x, max_x) and ideally at [x]. *)
+  let draw_label cr ~v ~y ~min_x ~max_x x msg =
+    C.move_to cr ~x ~y;
+    C.line_to cr ~x ~y:(y +. 6.);
+    C.stroke cr;
+
+    let text_width = C.((text_extents cr msg).x_advance) in
+    let x =
+      x -. (text_width /. 2.)   (* Desired start for centred text *)
+      |> min (max_x -. text_width)
+      |> max min_x in
+
+    if x +. text_width > max_x then (
+      (* Doesn't fit. Draw as much as we can. *)
+      C.paint_text cr ~x:min_x ~y ~clip_area:(max_x -. x, v.View.height) msg;
+      max_x
+    ) else (
+      (* Show label on left margin if the thread starts off-screen *)
+      let x =
+        if x < 4.0 then min 4.0 (max_x -. text_width)
+        else x in
+        C.paint_text cr ~x ~y msg;
+        x +. text_width
+    )
+
+  let rec draw_labels cr ~v ~y ~min_x ~max_x = function
+    | [] -> ()
+    | [(time, msg)] -> 
+        let x = View.clip_x_of_time v time in
+        let _end : float = draw_label cr ~v ~y ~min_x ~max_x x msg in
+        ()
+    | (t1, msg1) :: (((t2, _msg2) :: _) as rest) ->
+        let x1 = View.clip_x_of_time v t1 in
+        let x2 = View.clip_x_of_time v t2 in
+        let min_x = draw_label cr ~v ~y ~min_x ~max_x:x2 x1 msg1 in
+        draw_labels cr ~v ~y ~min_x ~max_x rest
+
   let render v cr ~expose_area =
     let top_thread = v.View.top_thread in
     let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
@@ -210,34 +247,24 @@ module Make (C : CANVAS) = struct
       | _ -> ()
     );
 
+    thread_label cr;
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
       let start_x = View.x_of_start v t +. 2. in
       let end_x = View.x_of_end v t in
-      let y = View.y_of_thread v t -. 3.0 in
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
-        let msg =
-          match Thread.label t with
-          | None -> string_of_int (Thread.id t)
-          | Some label -> label in
-        let msg =
+        let y = View.y_of_thread v t -. 3.0 in
+        let labels =
+          match Thread.labels t with
+          | [] -> [Thread.start_time t, string_of_int (Thread.id t)]
+          | labels -> labels in
+        let labels =
           match Thread.failure t with
-          | None -> msg
-          | Some failure -> msg ^ " ->  " ^ failure in
-        thread_label cr;
+          | None -> labels
+          | Some failure -> (Thread.end_time t, failure) :: labels in
 
-        let text_width = C.((text_extents cr msg).x_advance) in
-        if text_width > thread_width then (
-          let x = start_x in
-          C.paint_text cr ~x ~y ~clip_area:(end_x -. x, v.View.height) msg
-        ) else (
-          (* Show label on left margin if the thread starts off-screen *)
-          let x =
-            if start_x < 4.0 then min 4.0 (end_x -. text_width)
-            else start_x in
-          C.paint_text cr ~x ~y msg
-        );
+        draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x labels
       )
     )
 end
