@@ -123,7 +123,7 @@ module Make (C : CANVAS) = struct
     C.paint cr;
 
     (* When the system thread is "active", the system is idle. *)
-    C.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
+    C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
     Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
       let start_x = View.clip_x_of_time v start_time in
       let end_x = View.clip_x_of_time v end_time in
