@@ -93,7 +93,11 @@ let of_sexp events =
         let a = get_thread a in
         a.end_time <- ev.time;
         assert (a.becomes = None);
-        a.becomes <- Some (get_thread b);
+        let b = Some (get_thread b) in
+        a.becomes <- b;
+        begin match !running_thread with
+        | Some (_t, current_thread) when current_thread.tid = a.tid -> switch ev.time b
+        | _ -> () end
     | Reads (a, b) ->
         let a = get_thread a in
         let b = get_thread b in
