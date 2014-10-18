@@ -36,6 +36,9 @@ module Make (C : CANVAS) = struct
   let thread_label cr =
     C.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
 
+  let type_label cr =
+    C.set_source_rgb cr ~r:0.5 ~g:0.5 ~b:0.5
+
   let anonymous_thread cr =
     C.set_line_width cr 2.0;
     C.set_source_rgb cr ~r:0.6 ~g:0.6 ~b:0.6
@@ -115,12 +118,13 @@ module Make (C : CANVAS) = struct
     let y = bottom -. C.(extents.height +. extents.y_bearing) -. 2.0 in
     C.paint_text cr ~x:4.0 ~y msg
 
-  (** Draw [msg] in the area (min_x, max_x) and ideally at [x]. *)
-  let draw_label cr ~v ~y ~min_x ~max_x x msg =
+  let draw_mark cr x y =
     C.move_to cr ~x ~y;
     C.line_to cr ~x ~y:(y +. 6.);
-    C.stroke cr;
+    C.stroke cr
 
+  (** Draw [msg] in the area (min_x, max_x) and ideally at [x]. *)
+  let draw_label cr ~v ~y ~min_x ~max_x x msg =
     let text_width = C.((text_extents cr msg).x_advance) in
     let x =
       x -. (text_width /. 2.)   (* Desired start for centred text *)
@@ -145,11 +149,13 @@ module Make (C : CANVAS) = struct
     | [(time, msg)] -> 
         let x = View.clip_x_of_time v time in
         let _end : float = draw_label cr ~v ~y ~min_x ~max_x x msg in
+        draw_mark cr x y;
         ()
     | (t1, msg1) :: (((t2, _msg2) :: _) as rest) ->
         let x1 = View.clip_x_of_time v t1 in
         let x2 = View.clip_x_of_time v t2 in
         let min_x = draw_label cr ~v ~y ~min_x ~max_x:x2 x1 msg1 in
+        draw_mark cr x1 y;
         draw_labels cr ~v ~y ~min_x ~max_x rest
 
   let render v cr ~expose_area =
@@ -265,6 +271,19 @@ module Make (C : CANVAS) = struct
           | Some failure -> (Thread.end_time t, failure) :: labels in
 
         draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x labels
+      )
+    );
+
+    type_label cr;
+    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+      let t = i.Interval_tree.Interval.value in
+      let start_x = View.x_of_start v t +. 2. in
+      let end_x = View.x_of_end v t in
+      let thread_width = end_x -. start_x in
+      if thread_width > 16. then (
+        let y = View.y_of_thread v t +. 10.0 in
+        draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Event.string_of_thread_type (Thread.thread_type t))
+        |> ignore;
       )
     )
 end

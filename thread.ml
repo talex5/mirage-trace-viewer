@@ -5,6 +5,7 @@ type interaction = Resolve | Read
 type time = float
 
 type t = {
+  thread_type : Event.thread_type;
   tid : int;
   start_time : time;
   mutable end_time : time;
@@ -17,7 +18,8 @@ type t = {
   mutable y : float;
 }
 
-let make_thread ~tid ~start_time = {
+let make_thread ~tid ~start_time ~thread_type = {
+  thread_type;
   tid;
   start_time;
   end_time = infinity;
@@ -39,7 +41,7 @@ let of_sexp events =
     match events with
     | [] -> failwith "No events!"
     | hd :: _ -> Event.((t_of_sexp hd).time) in
-  let top_thread = make_thread ~start_time ~tid:(-1) in
+  let top_thread = make_thread ~start_time ~tid:(-1) ~thread_type:Event.Preexisting in
   top_thread.end_time <- 0.0;
 
   let rec replacement thread =
@@ -52,7 +54,7 @@ let of_sexp events =
   let get_thread tid =
     try Hashtbl.find threads tid |> replacement
     with Not_found ->
-      let t = make_thread ~tid ~start_time:0.0 in
+      let t = make_thread ~tid ~start_time:0.0 ~thread_type:Event.Preexisting in
       Hashtbl.add threads tid t;
       top_thread.creates <- t :: top_thread.creates;
       t in
@@ -77,10 +79,10 @@ let of_sexp events =
     if ev.time > top_thread.end_time then top_thread.end_time <- ev.time;
 
     match ev.op with
-    | Creates (a, b) ->
+    | Creates (a, b, thread_type) ->
         let a = get_thread a in
         assert (not (Hashtbl.mem threads b));
-        let child = make_thread ~start_time:ev.time ~tid:b in
+        let child = make_thread ~start_time:ev.time ~tid:b ~thread_type in
         Hashtbl.add threads b child;
         a.creates <- child :: a.creates
     | Resolves (a, b, failure) ->
@@ -117,6 +119,7 @@ let of_sexp events =
   );
   top_thread
 
+let thread_type t = t.thread_type
 let start_time t = t.start_time
 let end_time t = t.end_time
 let creates t = t.creates

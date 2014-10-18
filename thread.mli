@@ -6,6 +6,8 @@ type t
 type time = float
 type interaction = Resolve | Read
 
+val thread_type : t -> Event.thread_type
+
 val start_time : t -> time
 val end_time : t -> time
 
