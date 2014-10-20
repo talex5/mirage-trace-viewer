@@ -24,7 +24,8 @@ end
 
 module R = Render.Make(Canvas)
 
-let make top_thread =
+let make vat =
+  let top_thread = Thread.top_thread vat in
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
   win#set_default_size
@@ -42,7 +43,7 @@ let make top_thread =
   win#show ();
 
   let alloc = area#misc#allocation in
-  let v = View.make ~top_thread
+  let v = View.make ~vat
     ~view_width:(float_of_int alloc.Gtk.width)
     ~view_height:(float_of_int alloc.Gtk.height) in
 

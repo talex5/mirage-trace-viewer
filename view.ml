@@ -1,7 +1,7 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
 type t = {
-  top_thread : Thread.t;
+  vat : Thread.vat;
   mutable scale : float;
   mutable view_width : float;
   mutable view_height : float;
@@ -44,12 +44,13 @@ let collect_events top =
   Array.sort by_second_time by_second;
   (by_first, by_second)
 
-let make ~view_width ~view_height ~top_thread =
+let make ~view_width ~view_height ~vat =
+  let top_thread = Thread.top_thread vat in
   let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
   let scale = (view_width -. margin *. 2.) /. time_range in
   let (arrow_events_by_first, arrow_events_by_second) = collect_events top_thread in
   let layout, height = Layout.arrange top_thread in {
-    top_thread;
+    vat;
     scale;
     view_width;
     view_height;
@@ -79,13 +80,15 @@ let width_of_timespan v t = t *. v.scale
 let timespan_of_width v w = w /. v.scale
 
 let set_scale v scale =
-  let time_range = Thread.end_time v.top_thread -. Thread.start_time v.top_thread in
+  let top_thread = Thread.top_thread v.vat in
+  let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
   let min_scale = (v.view_width -. margin *. 2.) /. time_range in
   v.scale <- max min_scale scale;
   v.grid_step <- calc_grid_step scale
 
 let scroll_bounds v =
-  let width = width_of_timespan v (Thread.end_time v.top_thread -. Thread.start_time v.top_thread) in
+  let top_thread = Thread.top_thread v.vat in
+  let width = width_of_timespan v (Thread.end_time top_thread -. Thread.start_time top_thread) in
   (
     (-. margin, width +. margin, v.view_width),
     (-. margin, v.height +. margin, v.view_height)
@@ -103,8 +106,9 @@ let set_size v width height =
 (** Set [view_start_time], within the allowed limits.
  * Returns the new horizontol scrollbar position. *)
 let set_start_time v t =
-  let trace_start_time = Thread.start_time v.top_thread in
-  let trace_end_time = Thread.end_time v.top_thread in
+  let top_thread = Thread.top_thread v.vat in
+  let trace_start_time = Thread.start_time top_thread in
+  let trace_end_time = Thread.end_time top_thread in
   v.view_start_time <- t
     |> min (trace_end_time -. ((v.view_width -. margin) /. v.scale))
     |> max (trace_start_time -. (margin /. v.scale));

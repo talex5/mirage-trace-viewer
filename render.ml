@@ -159,7 +159,8 @@ module Make (C : CANVAS) = struct
         draw_labels cr ~v ~y ~min_x ~max_x rest
 
   let render v cr ~expose_area =
-    let top_thread = v.View.top_thread in
+    let vat = v.View.vat in
+    let top_thread = Thread.top_thread vat in
     let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
 
     C.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
@@ -168,6 +169,16 @@ module Make (C : CANVAS) = struct
     (* When the system thread is "active", the system is idle. *)
     C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
     Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
+      let start_x = View.clip_x_of_time v start_time in
+      let end_x = View.clip_x_of_time v end_time in
+      if end_x >= expose_min_x && start_x < expose_max_x then (
+        C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
+        C.fill cr;
+      )
+    );
+
+    C.set_source_rgb cr ~r:0.7 ~g:0.6 ~b:0.6;
+    Thread.gc_periods vat |> List.iter (fun (start_time, end_time) ->
       let start_x = View.clip_x_of_time v start_time in
       let end_x = View.clip_x_of_time v end_time in
       if end_x >= expose_min_x && start_x < expose_max_x then (

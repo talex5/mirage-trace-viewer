@@ -18,6 +18,11 @@ type t = {
   mutable y : float;
 }
 
+type vat = {
+  top_thread : t;
+  mutable gc : (time * time) list;
+}
+
 let make_thread ~tid ~start_time ~thread_type = {
   thread_type;
   tid;
@@ -43,6 +48,8 @@ let of_sexp events =
     | hd :: _ -> Event.((t_of_sexp hd).time) in
   let top_thread = make_thread ~start_time ~tid:(-1) ~thread_type:Event.Preexisting in
   top_thread.end_time <- 0.0;
+
+  let vat = {top_thread; gc = []} in
 
   let rec replacement thread =
     match thread.becomes with
@@ -112,12 +119,17 @@ let of_sexp events =
         )
     | Switch a ->
         switch ev.time (Some (get_thread a))
+    | Gc duration ->
+        vat.gc <- (ev.time -. duration, ev.time) :: vat.gc
   );
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
     t.labels <- List.rev t.labels
   );
-  top_thread
+  vat
+
+let top_thread v = v.top_thread
+let gc_periods v = v.gc
 
 let thread_type t = t.thread_type
 let start_time t = t.start_time

@@ -3,8 +3,14 @@
 (** A single thread/promise. *)
 type t
 
+(** A group of threads, cooperatively threaded within the vat. *)
+type vat
+
 type time = float
 type interaction = Resolve | Read
+
+val top_thread : vat -> t
+val gc_periods : vat -> (time * time) list
 
 val thread_type : t -> Event.thread_type
 
@@ -29,8 +35,8 @@ val interactions : t -> (time * interaction * t) list
 val activations : t -> (time * time) list
 
 (** Parse a trace file, returning the root thread. *)
-val from_channel : in_channel -> t
-val of_sexp : Sexplib.Sexp.t list -> t
+val from_channel : in_channel -> vat
+val of_sexp : Sexplib.Sexp.t list -> vat
 
 val set_y : t -> float -> unit
 val y : t -> float

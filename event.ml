@@ -34,6 +34,7 @@ type op =
   | Becomes of thread * thread
   | Label of thread * string
   | Switch of thread
+  | Gc of float
   with sexp
 
 type t = {
