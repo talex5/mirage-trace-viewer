@@ -14,7 +14,8 @@ type t = {
   arrow_events_by_second : (Thread.t * Thread.time * Thread.interaction * Thread.t * Thread.time) array;
 }
 
-let margin = 20.
+let h_margin = 20.
+let v_margin = 30.
 
 let calc_grid_step scale =
   let l = 2.5 -. (log scale /. log 10.) |> floor in
@@ -47,15 +48,15 @@ let collect_events top =
 let make ~view_width ~view_height ~vat =
   let top_thread = Thread.top_thread vat in
   let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
-  let scale = (view_width -. margin *. 2.) /. time_range in
+  let scale = (view_width -. h_margin *. 2.) /. time_range in
   let (arrow_events_by_first, arrow_events_by_second) = collect_events top_thread in
   let layout, height = Layout.arrange top_thread in {
     vat;
     scale;
     view_width;
     view_height;
-    view_start_time = Thread.start_time top_thread -. (margin /. scale);
-    view_start_y = -.margin;
+    view_start_time = Thread.start_time top_thread -. (h_margin /. scale);
+    view_start_y = -.v_margin;
     height;
     grid_step = calc_grid_step scale;
     layout;
@@ -82,7 +83,7 @@ let timespan_of_width v w = w /. v.scale
 let set_scale v scale =
   let top_thread = Thread.top_thread v.vat in
   let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
-  let min_scale = (v.view_width -. margin *. 2.) /. time_range in
+  let min_scale = (v.view_width -. h_margin *. 2.) /. time_range in
   v.scale <- max min_scale scale;
   v.grid_step <- calc_grid_step scale
 
@@ -90,8 +91,8 @@ let scroll_bounds v =
   let top_thread = Thread.top_thread v.vat in
   let width = width_of_timespan v (Thread.end_time top_thread -. Thread.start_time top_thread) in
   (
-    (-. margin, width +. margin, v.view_width),
-    (-. margin, v.height +. margin, v.view_height)
+    (-. h_margin, width +. h_margin, v.view_width, (v.view_start_time -. Thread.start_time top_thread) *. v.scale),
+    (-. v_margin, v.height +. v_margin, v.view_height, v.view_start_y)
   )
 
 let visible_threads v visible_time_range =
@@ -110,14 +111,14 @@ let set_start_time v t =
   let trace_start_time = Thread.start_time top_thread in
   let trace_end_time = Thread.end_time top_thread in
   v.view_start_time <- t
-    |> min (trace_end_time -. ((v.view_width -. margin) /. v.scale))
-    |> max (trace_start_time -. (margin /. v.scale));
+    |> min (trace_end_time -. ((v.view_width -. h_margin) /. v.scale))
+    |> max (trace_start_time -. (h_margin /. v.scale));
   (v.view_start_time -. trace_start_time) *. v.scale
 
 let set_view_y v y =
   v.view_start_y <- y
-    |> min (v.height +. margin -. v.view_height)
-    |> max (-. margin);
+    |> min (v.height +. v_margin -. v.view_height)
+    |> max (-. v_margin);
   v.view_start_y
 
 let iter_interactions v t1 t2 f =

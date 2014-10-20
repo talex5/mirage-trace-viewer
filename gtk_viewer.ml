@@ -48,9 +48,12 @@ let make vat =
     ~view_height:(float_of_int alloc.Gtk.height) in
 
   let set_scollbars () =
-    let (xlo, xhi, xsize), (ylo, yhi, ysize) = View.scroll_bounds v in
+    let (xlo, xhi, xsize, xvalue), (ylo, yhi, ysize, yvalue) = View.scroll_bounds v in
     hadjustment#set_bounds ~lower:xlo ~upper:xhi ~page_size:xsize ();
-    vadjustment#set_bounds ~lower:ylo ~upper:yhi ~page_size:ysize () in
+    vadjustment#set_bounds ~lower:ylo ~upper:yhi ~page_size:ysize ();
+    hadjustment#set_value xvalue;
+    vadjustment#set_value yvalue;
+    in
 
   area#misc#connect#size_allocate ==> (fun alloc ->
     View.set_size v (float_of_int alloc.Gtk.width) (float_of_int alloc.Gtk.height);

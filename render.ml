@@ -93,7 +93,7 @@ module Make (C : CANVAS) = struct
     C.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
 
     let grid_step = v.View.grid_step in
-    let top = -. View.margin in
+    let top = -. View.v_margin in
     let bottom = v.View.view_height in
 
     let area_start_time = View.time_of_x v area_start_x in
@@ -123,7 +123,7 @@ module Make (C : CANVAS) = struct
     C.line_to cr ~x ~y:(y +. 6.);
     C.stroke cr
 
-  (** Draw [msg] in the area (min_x, max_x) and ideally at [x]. *)
+  (** Draw [msg] in the area (min_x, max_x) and ideally centred at [x]. *)
   let draw_label cr ~v ~y ~min_x ~max_x x msg =
     let text_width = C.((text_extents cr msg).x_advance) in
     let x =
@@ -163,8 +163,12 @@ module Make (C : CANVAS) = struct
     let top_thread = Thread.top_thread vat in
     let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
 
+    (* Note: switching drawing colours is really slow with HTML canvas, so we try to group by colour. *)
+
     C.set_source_rgb cr ~r:0.9 ~g:0.9 ~b:0.9;
     C.paint cr;
+
+    let region_labels = ref [] in
 
     (* When the system thread is "active", the system is idle. *)
     C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
@@ -174,6 +178,7 @@ module Make (C : CANVAS) = struct
       if end_x >= expose_min_x && start_x < expose_max_x then (
         C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
         C.fill cr;
+        if end_x -. start_x > 16. then region_labels := (start_x, end_x, "sleeping") :: !region_labels
       )
     );
 
@@ -184,12 +189,17 @@ module Make (C : CANVAS) = struct
       if end_x >= expose_min_x && start_x < expose_max_x then (
         C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
         C.fill cr;
+        if end_x -. start_x > 16. then region_labels := (start_x, end_x, "GC") :: !region_labels
       )
     );
 
-    draw_grid v cr expose_min_x expose_max_x;
+    C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0;
+    !region_labels |> List.iter (fun (min_x, max_x, label) ->
+      let x = (min_x +. max_x) /. 2. in
+      draw_label cr ~v ~y:(~-. 14.0 -. v.View.view_start_y) ~min_x ~max_x x label |> ignore
+    );
 
-    (* Note: switching drawing colours is really slow with HTML canvas, so we try to group by colour. *)
+    draw_grid v cr expose_min_x expose_max_x;
 
     let visible_t_min = View.time_of_x v expose_min_x in
     let visible_t_max = View.time_of_x v expose_max_x in
