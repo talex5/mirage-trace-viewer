@@ -42,11 +42,11 @@ let rec iter fn thread =
   thread.creates |> List.iter (iter fn)
 
 let of_sexp events =
-  let start_time =
+  let trace_start_time =
     match events with
     | [] -> failwith "No events!"
     | hd :: _ -> Event.((t_of_sexp hd).time) in
-  let top_thread = make_thread ~start_time ~tid:(-1) ~thread_type:Event.Preexisting in
+  let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:Event.Preexisting in
   top_thread.end_time <- 0.0;
 
   let vat = {top_thread; gc = []} in
@@ -83,44 +83,45 @@ let of_sexp events =
   events |> List.iter (fun sexp ->
     let open Event in
     let ev = t_of_sexp sexp in
-    if ev.time > top_thread.end_time then top_thread.end_time <- ev.time;
+    let time = ev.time -. trace_start_time in
+    if time > top_thread.end_time then top_thread.end_time <- time;
 
     match ev.op with
     | Creates (a, b, thread_type) ->
         let a = get_thread a in
         assert (not (Hashtbl.mem threads b));
-        let child = make_thread ~start_time:ev.time ~tid:b ~thread_type in
+        let child = make_thread ~start_time:time ~tid:b ~thread_type in
         Hashtbl.add threads b child;
         a.creates <- child :: a.creates
     | Resolves (a, b, failure) ->
         let a = get_thread a in
         let b = get_thread b in
-        a.interactions <- (ev.time, Resolve, b) :: a.interactions;
+        a.interactions <- (time, Resolve, b) :: a.interactions;
         b.failure <- failure;
-        b.end_time <- ev.time
+        b.end_time <- time
     | Becomes (a, b) ->
         let a = get_thread a in
-        a.end_time <- ev.time;
+        a.end_time <- time;
         assert (a.becomes = None);
         let b = Some (get_thread b) in
         a.becomes <- b;
         begin match !running_thread with
-        | Some (_t, current_thread) when current_thread.tid = a.tid -> switch ev.time b
+        | Some (_t, current_thread) when current_thread.tid = a.tid -> switch time b
         | _ -> () end
     | Reads (a, b) ->
         let a = get_thread a in
         let b = get_thread b in
-        switch ev.time (Some a);
-        a.interactions <- (ev.time, Read, b) :: a.interactions;
+        switch time (Some a);
+        a.interactions <- (time, Read, b) :: a.interactions;
     | Label (a, msg) ->
         if a <> -1 then (
           let a = get_thread a in
-          a.labels <- (ev.time, msg) :: a.labels
+          a.labels <- (time, msg) :: a.labels
         )
     | Switch a ->
-        switch ev.time (Some (get_thread a))
+        switch time (Some (get_thread a))
     | Gc duration ->
-        vat.gc <- (ev.time -. duration, ev.time) :: vat.gc
+        vat.gc <- (time -. duration, time) :: vat.gc
   );
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
