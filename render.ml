@@ -90,7 +90,7 @@ module Make (C : CANVAS) = struct
 
   let draw_grid v cr area_start_x area_end_x =
     C.set_line_width cr 1.0;
-    C.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
+    C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
 
     let grid_step = v.View.grid_step in
     let top = -. View.v_margin in
@@ -171,7 +171,7 @@ module Make (C : CANVAS) = struct
     let region_labels = ref [] in
 
     (* When the system thread is "active", the system is idle. *)
-    C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
+    C.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
     Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
       let start_x = View.clip_x_of_time v start_time in
       let end_x = View.clip_x_of_time v end_time in
