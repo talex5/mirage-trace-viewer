@@ -125,7 +125,15 @@ let of_sexp events =
   );
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
-    t.labels <- List.rev t.labels
+    let labels =
+      match t.labels with
+      | [] -> [t.start_time, string_of_int t.tid]
+      | labels -> labels in
+    let labels =
+      match t.failure with
+      | None -> labels
+      | Some failure -> (t.end_time, failure) :: labels in
+    t.labels <- List.rev labels
   );
   vat
 

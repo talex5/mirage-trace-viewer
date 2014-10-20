@@ -282,16 +282,7 @@ module Make (C : CANVAS) = struct
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
         let y = View.y_of_thread v t -. 3.0 in
-        let labels =
-          match Thread.labels t with
-          | [] -> [Thread.start_time t, string_of_int (Thread.id t)]
-          | labels -> labels in
-        let labels =
-          match Thread.failure t with
-          | None -> labels
-          | Some failure -> (Thread.end_time t, failure) :: labels in
-
-        draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x labels
+        draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x (Thread.labels t)
       )
     );
 
