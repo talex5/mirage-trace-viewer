@@ -161,4 +161,7 @@ let compare a b =
   | r -> r
 
 let from_channel ch =
-  Sexplib.Sexp.input_sexps ch |> of_sexp
+  try
+    Sexplib.Sexp.input_sexps ch |> of_sexp
+  with Sexplib.Pre_sexp.Of_sexp_error (ex, t) ->
+    failwith (Printf.sprintf "Error parsing '%s': %s" (Sexplib.Std.string_of_sexp t) (Printexc.to_string ex))
