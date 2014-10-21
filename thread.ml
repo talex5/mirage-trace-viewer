@@ -5,7 +5,7 @@ type interaction = Resolve | Read
 type time = float
 
 type t = {
-  thread_type : Event.thread_type;
+  thread_type : string;
   tid : int;
   start_time : time;
   mutable end_time : time;
@@ -46,7 +46,7 @@ let of_sexp events =
     match events with
     | [] -> failwith "No events!"
     | hd :: _ -> Event.((t_of_sexp hd).time) in
-  let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:Event.Preexisting in
+  let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"Preexisting" in
   top_thread.end_time <- 0.0;
 
   let vat = {top_thread; gc = []} in
@@ -61,7 +61,7 @@ let of_sexp events =
   let get_thread tid =
     try Hashtbl.find threads tid |> replacement
     with Not_found ->
-      let t = make_thread ~tid ~start_time:0.0 ~thread_type:Event.Preexisting in
+      let t = make_thread ~tid ~start_time:0.0 ~thread_type:"Preexisting" in
       Hashtbl.add threads tid t;
       top_thread.creates <- t :: top_thread.creates;
       t in

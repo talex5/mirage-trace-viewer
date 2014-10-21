@@ -4,31 +4,8 @@ let printf = Printf.printf
 
 type thread = int with sexp
 
-type thread_type =
-  | Wait
-  | Task
-  | Bind
-  | Try
-  | Choose
-  | Pick
-  | Join
-  | Map
-  | Preexisting
-  with sexp
-
-let string_of_thread_type = function
-  | Wait -> "wait"
-  | Task -> "task"
-  | Bind -> "bind"
-  | Try -> "try"
-  | Choose -> "choose"
-  | Pick -> "pick"
-  | Join -> "join"
-  | Map -> "map"
-  | Preexisting -> "preexisting"
-
 type op = 
-  | Creates of thread * thread * thread_type
+  | Creates of thread * thread * string
   | Reads of thread * thread
   | Resolves of thread * thread * string option
   | Becomes of thread * thread

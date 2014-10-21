@@ -12,7 +12,7 @@ type interaction = Resolve | Read
 val top_thread : vat -> t
 val gc_periods : vat -> (time * time) list
 
-val thread_type : t -> Event.thread_type
+val thread_type : t -> string
 
 val start_time : t -> time
 val end_time : t -> time

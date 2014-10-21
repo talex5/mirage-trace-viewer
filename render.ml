@@ -302,7 +302,7 @@ module Make (C : CANVAS) = struct
           match Thread.becomes t with
           | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
           | _ -> end_x in
-        draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Event.string_of_thread_type (Thread.thread_type t))
+        draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Thread.thread_type t)
         |> ignore;
       )
     )
