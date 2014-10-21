@@ -18,9 +18,14 @@ type t = {
   mutable y : float;
 }
 
+type mutable_counter = {
+  mutable mc_values : (time * int) list;
+}
+
 type vat = {
   top_thread : t;
   mutable gc : (time * time) list;
+  mutable counters : Counter.t list;
 }
 
 let make_thread ~tid ~start_time ~thread_type = {
@@ -41,6 +46,11 @@ let rec iter fn thread =
   fn thread;
   thread.creates |> List.iter (iter fn)
 
+let counter_value c =
+  match c.mc_values with
+  | [] -> 0
+  | (_, v) :: _ -> v
+
 let of_sexp events =
   let trace_start_time =
     match events with
@@ -49,7 +59,15 @@ let of_sexp events =
   let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"Preexisting" in
   top_thread.end_time <- 0.0;
 
-  let vat = {top_thread; gc = []} in
+  let vat = {top_thread; gc = []; counters = []} in
+
+  let counters = Hashtbl.create 2 in
+  let get_counter name =
+    try Hashtbl.find counters name
+    with Not_found ->
+      let c = { mc_values = [] } in
+      Hashtbl.add counters name c;
+      c in
 
   let rec replacement thread =
     match thread.becomes with
@@ -122,6 +140,12 @@ let of_sexp events =
         switch time (Some (get_thread a))
     | Gc duration ->
         vat.gc <- (time -. duration, time) :: vat.gc
+    | Increases (a, counter, amount) ->
+        let c = get_counter counter in
+        let new_value = counter_value c + amount in
+        c.mc_values <- (time, new_value) :: c.mc_values;
+        let a = get_thread a in
+        a.labels <- (time, counter ^ "+" ^ string_of_int amount) :: a.labels
   );
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
@@ -134,6 +158,22 @@ let of_sexp events =
       | None -> labels
       | Some failure -> (t.end_time, failure) :: labels in
     t.labels <- List.rev labels
+  );
+  counters |> Hashtbl.iter (fun name mc ->
+    let values = List.rev mc.mc_values |> List.map (fun (t, v) -> (t, float_of_int v)) |> Array.of_list in
+    let low = ref 0. in
+    let high = ref 0. in
+    values |> Array.iter (fun (_, v) ->
+      low := min !low v;
+      high := max !high v;
+    );
+    let counter = { Counter.
+      name;
+      values;
+      min = !low;
+      max = !high;
+    } in
+    vat.counters <- counter :: vat.counters
   );
   vat
 
@@ -165,3 +205,5 @@ let from_channel ch =
     Sexplib.Sexp.input_sexps ch |> of_sexp
   with Sexplib.Pre_sexp.Of_sexp_error (ex, t) ->
     failwith (Printf.sprintf "Error parsing '%s': %s" (Sexplib.Std.string_of_sexp t) (Printexc.to_string ex))
+
+let counters vat = vat.counters

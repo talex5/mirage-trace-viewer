@@ -12,6 +12,7 @@ type op =
   | Label of thread * string
   | Switch of thread
   | Gc of float
+  | Increases of thread * string * int
   with sexp
 
 type t = {

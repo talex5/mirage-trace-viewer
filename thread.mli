@@ -47,3 +47,5 @@ val compare : t -> t -> int
 val id : t -> int
 
 val iter : (t -> unit) -> t -> unit
+
+val counters : vat -> Counter.t list

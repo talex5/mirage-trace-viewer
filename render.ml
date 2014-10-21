@@ -34,10 +34,13 @@ module Make (C : CANVAS) = struct
   let thin cr = C.set_line_width cr 1.0
 
   let thread_label cr =
-    C.set_source_rgb cr ~r:0.8 ~g:0.2 ~b:0.2
+    C.set_source_rgb cr ~r:0.0 ~g:0.0 ~b:0.0
 
   let type_label cr =
     C.set_source_rgb cr ~r:0.5 ~g:0.5 ~b:0.5
+
+  let counter_line cr =
+    C.set_source_rgb cr ~r:1.0 ~g:0.0 ~b:0.0
 
   let anonymous_thread cr =
     C.set_line_width cr 2.0;
@@ -305,5 +308,33 @@ module Make (C : CANVAS) = struct
         draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Thread.thread_type t)
         |> ignore;
       )
-    )
+    );
+
+    counter_line cr;
+    Thread.counters vat |> List.iter (fun counter ->
+      let open Counter in
+      let range = counter.max -. counter.min in
+      let v_scale = v.View.view_height /. range in
+      let v_offset = v.View.view_height *. (1. +. counter.min /. range) in
+      let y_of_value value = v_offset -. v_scale *. value in
+
+      let values = counter.values in
+      let i = Sorted_array.count_before (fun (time, _v) -> time >= v.View.view_start_time) values in
+      let first_visible = max (i - 1) 0 in
+      let y = ref (y_of_value (snd values.(first_visible))) in
+      C.move_to cr ~x:0.0 ~y:!y;
+      begin try
+        values |> Array.iter (fun (time, value) ->
+          let x = View.clip_x_of_time v time in
+          C.line_to cr ~x ~y:!y;
+          let new_y = y_of_value value in
+          C.line_to cr ~x ~y:new_y;
+          y := new_y;
+          if x > v.View.view_width then raise Exit
+        )
+      with Exit -> () end;
+      C.line_to cr ~x:v.View.view_width ~y:!y;
+      C.stroke cr;
+      draw_label cr ~v ~y:(!y +. 14.) ~min_x:0.0 ~max_x:v.View.view_width v.View.view_width counter.name |> ignore
+    );
 end
