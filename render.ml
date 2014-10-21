@@ -282,6 +282,10 @@ module Make (C : CANVAS) = struct
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
         let y = View.y_of_thread v t -. 3.0 in
+        let end_x =
+          match Thread.becomes t with
+          | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
+          | _ -> end_x in
         draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x (Thread.labels t)
       )
     );
@@ -294,6 +298,10 @@ module Make (C : CANVAS) = struct
       let thread_width = end_x -. start_x in
       if thread_width > 16. then (
         let y = View.y_of_thread v t +. 10.0 in
+        let end_x =
+          match Thread.becomes t with
+          | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
+          | _ -> end_x in
         draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Event.string_of_thread_type (Thread.thread_type t))
         |> ignore;
       )
