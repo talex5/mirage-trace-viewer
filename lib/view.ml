@@ -1,12 +1,21 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+(** Some values used for calculating vertical positions.
+ * Saved so we don't have to regenerate them for every thread. *)
+type v_projection = {
+  focal_y : float;                  (* The y position in thread coordinates which is most expanded. *)
+  v_scale : float;                  (* To make the distance between threads sensible. *)
+  unstretched_top_proj : float;     (* Where the top would be if we didn't stretch the result. *)
+  unstretched_range : float;        (* Distance beween top and bottom. *)
+}
+
 type t = {
   vat : Thread.vat;
   mutable scale : float;
   mutable view_width : float;
   mutable view_height : float;
   mutable view_start_time : float;
-  mutable view_start_y : float;
+  mutable v_projection : v_projection;
   height : float;
   mutable grid_step : float;
   layout : Layout.t;
@@ -45,6 +54,33 @@ let collect_events top =
   Array.sort by_second_time by_second;
   (by_first, by_second)
 
+let v_projection_for_focus ~height focal_y =
+  (* Hack: because we scale so that y=0 is always at the top and y=h is always
+   * at the bottom, we need to adjust the scale factor to keep the lengths around
+   * focal_y constant. I couldn't figure out the correct formula for this. *)
+  let v_scale =
+    if focal_y < height /. 2. then (
+      let d = focal_y /. 500. in
+      let top_unscaled = (1. -. exp d) /. (1. +. exp d) in
+      500. +. (top_unscaled *. 250.)
+    ) else (
+      let d = (focal_y -. height) /. 500. in
+      let bottom_unscaled = (1. -. exp d) /. (1. +. exp d) in
+      500. -. (bottom_unscaled *. 250.)
+    ) in
+
+  let hyp_project d =
+    let d = (focal_y -. d) /. v_scale in
+    (1. -. exp d) /. (1. +. exp d) in
+
+  let top_proj = hyp_project 0.0 in
+  let bottom_proj = hyp_project height in {
+    focal_y;
+    v_scale;
+    unstretched_top_proj = top_proj;
+    unstretched_range = bottom_proj -. top_proj;
+  }
+
 let make ~view_width ~view_height ~vat =
   let top_thread = Thread.top_thread vat in
   let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
@@ -56,7 +92,7 @@ let make ~view_width ~view_height ~vat =
     view_width;
     view_height;
     view_start_time = Thread.start_time top_thread -. (h_margin /. scale);
-    view_start_y = -.v_margin;
+    v_projection = v_projection_for_focus ~height 0.0;
     height;
     grid_step = calc_grid_step scale;
     layout;
@@ -75,7 +111,31 @@ let clip_x_of_time v t =
   |> min 1_000_000.
   |> max (-1_000_000.)
 
-let y_of_thread v t = Thread.y t -. v.view_start_y
+let view_y_of_y v y =
+  let p = v.v_projection in
+  let focal_y = p.focal_y in
+
+  let hyp_project d =
+    let d = (focal_y -. d) /. p.v_scale in
+    (1. -. exp d) /. (1. +. exp d) in
+
+  let this_proj = hyp_project y in
+  let frac = (this_proj -. p.unstretched_top_proj) /. p.unstretched_range in
+  v_margin +. (v.view_height -. 2. *. v_margin) *. frac
+
+let y_of_view_y v view_y =
+  if view_y <= v_margin then 0.0
+  else if view_y >= v.view_height -. v_margin then v.height
+  else (
+    let p = v.v_projection in
+    let focal_y = p.focal_y in
+    let frac = (view_y -. v_margin) /. (v.view_height -. 2. *. v_margin) in
+    let this_proj = frac *. p.unstretched_range +. p.unstretched_top_proj in
+    let d = -. log ((1. +. this_proj) /. (1. -. this_proj)) in
+    ~-. (d *. p.v_scale -. focal_y)
+  )
+
+let y_of_thread v t = view_y_of_y v (Thread.y t)
 
 let width_of_timespan v t = t *. v.scale
 let timespan_of_width v w = w /. v.scale
@@ -92,7 +152,7 @@ let scroll_bounds v =
   let width = width_of_timespan v (Thread.end_time top_thread -. Thread.start_time top_thread) in
   (
     (-. h_margin, width +. h_margin, v.view_width, (v.view_start_time -. Thread.start_time top_thread) *. v.scale),
-    (-. v_margin, v.height +. v_margin, v.view_height, v.view_start_y)
+    (-. v_margin, v.height +. v_margin +. v.view_height, v.view_height, v.v_projection.focal_y)
   )
 
 let visible_threads v visible_time_range =
@@ -116,10 +176,30 @@ let set_start_time v t =
   (v.view_start_time -. trace_start_time) *. v.scale
 
 let set_view_y v y =
-  v.view_start_y <- y
-    |> min (v.height +. v_margin -. v.view_height)
-    |> max (-. v_margin);
-  v.view_start_y
+  let focal_y = y
+    |> min (v.height +. v_margin)
+    |> max (-. v_margin) in
+  v.v_projection <- v_projection_for_focus ~height:v.height focal_y;
+  focal_y
+
+(** Set focal_y so that [y] appears at [view_y]. *)
+let set_view_y_so v y view_y =
+  (* Binary search because I didn't pay attention in maths class. *)
+  let rec aux lo high i =
+    if i = 0 then ()
+    else (
+      let f = (lo +. high) /. 2. in
+      v.v_projection <- v_projection_for_focus ~height:v.height f;
+      let this_view_y = view_y_of_y v y in
+      let d = this_view_y -. view_y in
+      if d < 1. then aux lo f (i - 1)
+      else if d > -1.0 then aux f high (i - 1)
+      else ()
+    ) in
+  if view_y > v_margin && view_y < v.view_height -. v_margin then (
+    aux 0.0 v.height 20
+  );
+  v.v_projection.focal_y
 
 let iter_interactions v t1 t2 f =
   Sorted_array.iter_range v.arrow_events_by_first

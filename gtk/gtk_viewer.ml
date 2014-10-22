@@ -103,7 +103,9 @@ let make vat =
   let drag_start = ref None in
   area#event#connect#button_press ==> (fun ev ->
     if GdkEvent.Button.button ev = 1 then (
-      drag_start := Some (GdkEvent.Button.(View.time_of_x v (x ev), y ev +. v.View.view_start_y));
+      let start_t = View.time_of_x v (GdkEvent.Button.x ev) in
+      let start_y = View.y_of_view_y v (GdkEvent.Button.y ev) in
+      drag_start := Some (start_t, start_y);
       true;
     ) else false
   );
@@ -115,9 +117,11 @@ let make vat =
         let x = GdkEvent.Motion.x ev in
         let y = GdkEvent.Motion.y ev in
         let time_at_pointer = View.time_of_x v x in
-        if time_at_pointer <> start_time || start_y <> y then (
+        let y_at_pointer = View.y_of_view_y v y in
+        if time_at_pointer <> start_time || start_y <> y_at_pointer then (
           set_start_time (start_time -. View.timespan_of_width v x);
-          set_view_y (start_y -. y);
+          View.set_view_y_so v start_y y
+          |> vadjustment#set_value;
           GtkBase.Widget.queue_draw area#as_widget
         );
         true

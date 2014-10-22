@@ -199,7 +199,7 @@ module Make (C : CANVAS) = struct
     C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0;
     !region_labels |> List.iter (fun (min_x, max_x, label) ->
       let x = (min_x +. max_x) /. 2. in
-      draw_label cr ~v ~y:(~-. 14.0 -. v.View.view_start_y) ~min_x ~max_x x label |> ignore
+      draw_label cr ~v ~y:14.0 ~min_x ~max_x x label |> ignore
     );
 
     draw_grid v cr expose_min_x expose_max_x;
@@ -277,13 +277,17 @@ module Make (C : CANVAS) = struct
       | _ -> ()
     );
 
+    let text_visible t =
+      let vert_dist = Thread.y t -. View.(v.v_projection.focal_y) in
+      vert_dist > -.2000. && vert_dist < 2000. in
+
     thread_label cr;
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
       let start_x = View.x_of_start v t +. 2. in
       let end_x = View.x_of_end v t in
       let thread_width = end_x -. start_x in
-      if thread_width > 16. then (
+      if thread_width > 16. && text_visible t then (
         let y = View.y_of_thread v t -. 3.0 in
         let end_x =
           match Thread.becomes t with
@@ -293,13 +297,17 @@ module Make (C : CANVAS) = struct
       )
     );
 
+    let text_visible t =
+      let vert_dist = Thread.y t -. View.(v.v_projection.focal_y) in
+      vert_dist > -.1000. && vert_dist < 1000. in
+
     type_label cr;
     visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
       let start_x = View.x_of_start v t +. 2. in
       let end_x = View.x_of_end v t in
       let thread_width = end_x -. start_x in
-      if thread_width > 16. then (
+      if thread_width > 16. && text_visible t then (
         let y = View.y_of_thread v t +. 10.0 in
         let end_x =
           match Thread.becomes t with

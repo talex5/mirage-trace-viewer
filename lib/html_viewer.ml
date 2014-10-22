@@ -133,15 +133,16 @@ let attach c v =
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
     let start_time = View.time_of_x v (float_of_int ev##clientX) in
-    let start_y = float_of_int ev##clientY in
+    let start_y = View.y_of_view_y v (float_of_int ev##clientY) in
 
     let motion (ev:Dom_html.mouseEvent Js.t) =
       let x = float_of_int ev##clientX in
       let y = float_of_int ev##clientY in
       let time_at_pointer = View.time_of_x v x in
-      if time_at_pointer <> start_time || start_y <> y then (
+      let y_at_pointer = View.y_of_view_y v y in
+      if time_at_pointer <> start_time || y_at_pointer <> start_y then (
         View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
-        View.set_view_y v (start_y -. y) |> ignore;
+        View.set_view_y_so v start_y y |> ignore;
         render ();
       );
       Js._false in
@@ -169,7 +170,10 @@ let attach c v =
   let touch_change (ev:Dom_html.touchEvent Js.t) =
     Dom.preventDefault ev;
     begin match touches ev##touches with
-    | [t] -> touch := Touch_drag (View.time_of_x v (float_of_int t##clientX), float_of_int t##clientY)
+    | [t] -> touch := Touch_drag (
+          View.time_of_x v (float_of_int t##clientX),
+          View.view_y_of_y v (float_of_int t##clientY)
+        )
     | [t0; t1] ->
         touch := Touch_zoom (
           (View.time_of_x v (float_of_int t0##clientX)),
@@ -182,11 +186,12 @@ let attach c v =
     begin match !touch, touches ev##touches with
     | Touch_drag (start_time, start_y), [touch] ->
         let x_new = float_of_int touch##clientX in
-        let y_new = float_of_int touch##clientY in
+        let view_y_new = float_of_int touch##clientY in
         let t_new = View.x_of_time v x_new in
+        let y_new = View.y_of_view_y v view_y_new in
         if t_new <> start_time || start_y <> y_new then (
           View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
-          View.set_view_y v (start_y -. y_new) |> ignore;
+          View.set_view_y_so v start_y view_y_new |> ignore;
           render ();
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
