@@ -28,6 +28,26 @@ type vat = {
   mutable counters : Counter.t list;
 }
 
+(* For threads with no end. Call before we reverse the lists. *)
+let last_event_time t =
+  let last = ref t.start_time in
+  begin match t.creates with
+  | child :: _ -> last := max !last child.start_time
+  | _ -> () end;
+  begin match t.becomes with
+  | Some child -> last := max !last child.start_time
+  | None -> () end;
+  begin match t.labels with
+  | (time, _) :: _ -> last := max !last time
+  | _ -> () end;
+  begin match t.interactions with
+  | (time, _, _) :: _ -> last := max !last time
+  | _ -> () end;
+  begin match t.activations with
+  | (_, time) :: _ -> last := max !last time
+  | _ -> () end;
+  !last
+
 let make_thread ~tid ~start_time ~thread_type = {
   thread_type;
   tid;
@@ -157,7 +177,11 @@ let of_sexp events =
       match t.failure with
       | None -> labels
       | Some failure -> (t.end_time, failure) :: labels in
-    t.labels <- List.rev labels
+    if t.end_time = infinity then (
+      (* It probably got GC'd, but we don't see that. Make it disappear soon after its last event. *)
+      t.end_time <- last_event_time t +. 0.000_001;
+    );
+    t.labels <- List.rev labels;
   );
   counters |> Hashtbl.iter (fun name mc ->
     let values = List.rev mc.mc_values |> List.map (fun (t, v) -> (t, float_of_int v)) |> Array.of_list in
@@ -175,6 +199,9 @@ let of_sexp events =
     } in
     vat.counters <- counter :: vat.counters
   );
+  (* Create pre-existing threads in thread order, not the order we first saw them. *)
+  let by_thread_id a b = compare a.tid b.tid in
+  top_thread.creates <- List.sort by_thread_id top_thread.creates;
   vat
 
 let top_thread v = v.top_thread
