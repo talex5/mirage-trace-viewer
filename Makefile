@@ -1,15 +1,47 @@
-all: gtk_viewer html_viewer html_example.js
+default: all examples/example_html.js
 
-gtk_viewer:
-	ocamlbuild -cflag -g -use-ocamlfind gtk_viewer.native
+# OASIS_START
+# DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
 
-html_viewer:
-	ocamlbuild -cflag -g -use-ocamlfind html_viewer.cmo
+SETUP = ocaml setup.ml
 
-html_example.js:
-	ocamlbuild -cflag -g -use-ocamlfind example_html.byte precompute.native
-	./precompute.native examples/log-x86.sexp
-	js_of_ocaml --opt=3 +weak.js example_html.byte -I examples --file log-x86.bin
+build: setup.data
+	$(SETUP) -build $(BUILDFLAGS)
+
+doc: setup.data build
+	$(SETUP) -doc $(DOCFLAGS)
+
+test: setup.data build
+	$(SETUP) -test $(TESTFLAGS)
+
+all:
+	$(SETUP) -all $(ALLFLAGS)
+
+install: setup.data
+	$(SETUP) -install $(INSTALLFLAGS)
+
+uninstall: setup.data
+	$(SETUP) -uninstall $(UNINSTALLFLAGS)
+
+reinstall: setup.data
+	$(SETUP) -reinstall $(REINSTALLFLAGS)
 
 clean:
-	ocamlbuild -clean
+	$(SETUP) -clean $(CLEANFLAGS)
+
+distclean:
+	$(SETUP) -distclean $(DISTCLEANFLAGS)
+
+setup.data:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+configure:
+	$(SETUP) -configure $(CONFIGUREFLAGS)
+
+.PHONY: build doc test all install uninstall reinstall clean distclean configure
+
+# OASIS_STOP
+
+examples/example_html.js: build
+	./precompute.native examples/log-x86.sexp
+	js_of_ocaml --opt=3 +weak.js example_html.byte -I examples --file log-x86.bin -o $@

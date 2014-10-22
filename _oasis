@@ -1,0 +1,34 @@
+OASISFormat: 0.4
+Name:        mirage-trace-viewer
+Version:     0.1
+Synopsis:    Graphical viewer of Lwt trace logs
+Authors:     Thomas Leonard
+License:     BSD-2-clause
+Plugins:     META (0.4), DevFiles (0.4)
+
+Library "mirage-trace-viewer"
+  Path:       lib
+  BuildTools: ocamlbuild
+  Modules:    ITree, Html_viewer, Render, Counter, Event, Layout, Sorted_array, Thread, View
+  BuildDepends: itv-tree,sexplib,sexplib.syntax,js_of_ocaml,js_of_ocaml.syntax
+  
+Executable "mirage-trace-viewer"
+  Path:       gtk
+  BuildTools: ocamlbuild
+  MainIs:     gtk_viewer.ml
+  BuildDepends: lablgtk2,cairo2.lablgtk2,cairo2,mirage-trace-viewer
+  CompiledObject: best
+  
+Executable "mirage-trace-viewer-precompute"
+  Path:       lib
+  BuildTools: ocamlbuild
+  MainIs:     precompute.ml
+  BuildDepends: mirage-trace-viewer
+  CompiledObject: best
+
+Executable "example_html"
+  Path:	      examples
+  BuildTools: ocamlbuild
+  MainIs:     example_html.ml
+  BuildDepends: mirage-trace-viewer
+  CompiledObject: byte

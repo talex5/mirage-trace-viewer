@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: e6d6e133bccb5463bb3381f03c06e6eb)
+version = "0.1"
+description = "Graphical viewer of Lwt trace logs"
+requires = "itv-tree sexplib sexplib.syntax js_of_ocaml js_of_ocaml.syntax"
+archive(byte) = "mirage-trace-viewer.cma"
+archive(byte, plugin) = "mirage-trace-viewer.cma"
+archive(native) = "mirage-trace-viewer.cmxa"
+archive(native, plugin) = "mirage-trace-viewer.cmxs"
+exists_if = "mirage-trace-viewer.cma"
+# OASIS_STOP
+
