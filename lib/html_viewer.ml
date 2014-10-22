@@ -80,6 +80,11 @@ type touch =
   | Touch_drag of (Thread.time * float)
   | Touch_zoom of (Thread.time * Thread.time)
 
+let resize_callbacks = ref []
+let () =
+  let cb () = !resize_callbacks |> List.iter (fun f -> f ()) in
+  Js.Unsafe.global##resizeCanvasElements <- Js.wrap_callback cb
+
 (** Connect callbacks to render view [v] on canvas [c]. *)
 let attach c v =
   let render_queued = ref false in
@@ -95,7 +100,7 @@ let attach c v =
       render_queued := true
     ) in
 
-  let resize _ev =
+  let resize () =
     let view_width = c##clientWidth in
     let view_height = c##clientHeight in
     c##width <- view_width;
@@ -103,8 +108,7 @@ let attach c v =
     let view_width = float_of_int view_width in
     let view_height = float_of_int view_height in
     View.set_size v view_width view_height;
-    render ();
-    Js._false in
+    render () in
 
   let zoom (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
     let x = float_of_int ev##clientX in
@@ -206,5 +210,7 @@ let attach c v =
   Dom_html.addEventListener c Dom_html.Event.touchend (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchcancel (Dom_html.handler touch_change) (Js.bool true) |> ignore;
 
-  Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize) (Js.bool true) |> ignore;
-  ignore (resize ())
+  let resize_false _ = resize (); Js._false in
+  Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize_false) (Js.bool true) |> ignore;
+  resize_callbacks := resize :: !resize_callbacks;
+  resize ();
