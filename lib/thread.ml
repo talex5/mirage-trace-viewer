@@ -56,7 +56,7 @@ let of_sexp events =
     match events with
     | [] -> failwith "No events!"
     | hd :: _ -> Event.((t_of_sexp hd).time) in
-  let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"Preexisting" in
+  let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"preexisting" in
   top_thread.end_time <- 0.0;
 
   let vat = {top_thread; gc = []; counters = []} in
@@ -79,7 +79,7 @@ let of_sexp events =
   let get_thread tid =
     try Hashtbl.find threads tid |> replacement
     with Not_found ->
-      let t = make_thread ~tid ~start_time:0.0 ~thread_type:"Preexisting" in
+      let t = make_thread ~tid ~start_time:0.0 ~thread_type:"preexisting" in
       Hashtbl.add threads tid t;
       top_thread.creates <- t :: top_thread.creates;
       t in
@@ -108,7 +108,7 @@ let of_sexp events =
     | Creates (a, b, thread_type) ->
         let a = get_thread a in
         assert (not (Hashtbl.mem threads b));
-        let child = make_thread ~start_time:time ~tid:b ~thread_type in
+        let child = make_thread ~start_time:time ~tid:b ~thread_type:(String.lowercase thread_type) in
         Hashtbl.add threads b child;
         a.creates <- child :: a.creates
     | Resolves (a, b, failure) ->
