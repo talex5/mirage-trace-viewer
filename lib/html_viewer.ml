@@ -95,7 +95,7 @@ let attach c v =
       render_queued := true
     ) in
 
-  let main _ev =
+  let resize _ev =
     let view_width = c##clientWidth in
     let view_height = c##clientHeight in
     c##width <- view_width;
@@ -206,5 +206,5 @@ let attach c v =
   Dom_html.addEventListener c Dom_html.Event.touchend (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchcancel (Dom_html.handler touch_change) (Js.bool true) |> ignore;
 
-  Dom_html.window##onload <- Dom_html.handler main;
-  Dom_html.window##onresize <- Dom_html.handler main
+  Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize) (Js.bool true) |> ignore;
+  ignore (resize ())
