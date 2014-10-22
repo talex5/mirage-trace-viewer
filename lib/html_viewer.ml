@@ -85,12 +85,9 @@ let attach c v =
   let render_queued = ref false in
   let render_now () =
     render_queued := false;
-    Printf.printf "render_now: %.2f\n" (Unix.gettimeofday () -. t0);
-    (* let t0 = Unix.gettimeofday () in *)
     let ctx = c##getContext(Dom_html._2d_) in
     ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
-    Printf.printf "render done: %.2f\n" (Unix.gettimeofday () -. t0) in
+    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height)) in
 
   let render () =
     if not (!render_queued) then (
