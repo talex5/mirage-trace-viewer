@@ -44,7 +44,7 @@ let collect_events top =
             (thread, time, op, other, end_time)
         | Thread.Resolve ->
             let start_time = min time (Thread.end_time thread) in
-            (thread, time, op, other, start_time)
+            (thread, start_time, op, other, time)
       ) in
     events := interactions @ !events
   );
