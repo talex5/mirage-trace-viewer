@@ -86,9 +86,26 @@ let () =
   Js.Unsafe.global##resizeCanvasElements <- Js.wrap_callback cb
 
 (** Connect callbacks to render view [v] on canvas [c]. *)
-let attach c v =
-  let getX ev = float_of_int (ev##clientX - c##offsetLeft) in
-  let getY ev = float_of_int (ev##clientY - c##offsetTop) in
+let attach (c:Dom_html.canvasElement Js.t) v =
+  let rel_coords (x, y) =
+    let rec adjust (elem:Dom_html.element Js.t) (x, y) = 
+      let x = x - elem##offsetLeft + elem##scrollLeft in
+      let y = y - elem##offsetTop + elem##scrollTop in
+      Js.Opt.case (elem##offsetParent)
+        (fun () ->
+          (float_of_int x, float_of_int y))
+        (fun parent -> adjust parent (x, y)) in
+    adjust (c :> Dom_html.element Js.t) (x, y) in
+
+  let rel_mouse_coords ev =
+    let x = Js.Optdef.get (ev##pageX) (fun () -> ev##clientX) in
+    let y = Js.Optdef.get (ev##pageY) (fun () -> ev##clientY) in
+    rel_coords (x, y) in
+
+  let rel_touch_coords ev =
+    let x = ev##pageX in
+    let y = ev##pageY in
+    rel_coords (x, y) in
 
   let render_queued = ref false in
   let render_now () =
@@ -114,7 +131,7 @@ let attach c v =
     render () in
 
   let zoom (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
-    let x = getX ev in
+    let (x, _) = rel_mouse_coords ev in
     let t_at_pointer = View.time_of_x v x in
 
     if dy < 0 then
@@ -135,12 +152,12 @@ let attach c v =
     Js._false in
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
-    let start_time = View.time_of_x v (getX ev) in
-    let start_y = View.y_of_view_y v (getY ev) in
+    let (x, y) = rel_mouse_coords ev in
+    let start_time = View.time_of_x v x in
+    let start_y = View.y_of_view_y v y in
 
     let motion (ev:Dom_html.mouseEvent Js.t) =
-      let x = getX ev in
-      let y = getY ev in
+      let (x, y) = rel_mouse_coords ev in
       let time_at_pointer = View.time_of_x v x in
       let y_at_pointer = View.y_of_view_y v y in
       if time_at_pointer <> start_time || y_at_pointer <> start_y then (
@@ -173,14 +190,18 @@ let attach c v =
   let touch_change (ev:Dom_html.touchEvent Js.t) =
     Dom.preventDefault ev;
     begin match touches ev##touches with
-    | [t] -> touch := Touch_drag (
-          View.time_of_x v (getX t),
-          View.view_y_of_y v (getY t)
+    | [t] ->
+        let (x, y) = rel_touch_coords t in
+        touch := Touch_drag (
+          View.time_of_x v x,
+          View.view_y_of_y v y
         )
     | [t0; t1] ->
+        let (x0, _) = rel_touch_coords t0 in
+        let (x1, _) = rel_touch_coords t1 in
         touch := Touch_zoom (
-          (View.time_of_x v (getX t0)),
-          (View.time_of_x v (getX t1))
+          (View.time_of_x v x0),
+          (View.time_of_x v x1)
         )
     | _ -> touch := Touch_none end;
     Js._false in
@@ -188,8 +209,7 @@ let attach c v =
   let touch_move (ev:Dom_html.touchEvent Js.t) =
     begin match !touch, touches ev##touches with
     | Touch_drag (start_time, start_y), [touch] ->
-        let x_new = getX touch in
-        let view_y_new = getY touch in
+        let x_new, view_y_new = rel_touch_coords touch in
         let t_new = View.x_of_time v x_new in
         let y_new = View.y_of_view_y v view_y_new in
         if t_new <> start_time || start_y <> y_new then (
@@ -198,8 +218,8 @@ let attach c v =
           render ();
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
-        let x0 = getX touch0 in
-        let x1 = getX touch1 in
+        let (x0, _) = rel_touch_coords touch0 in
+        let (x1, _) = rel_touch_coords touch1 in
         View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
         View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
         render ();
