@@ -336,7 +336,10 @@ module Make (C : CANVAS) = struct
       let values = counter.values in
       let i = Sorted_array.count_before (fun (time, _v) -> time >= v.View.view_start_time) values in
       let first_visible = max (i - 1) 0 in
-      let y = ref (y_of_value (snd values.(first_visible))) in
+      let first_value =
+        if i = 0 then 0.0
+        else (snd values.(first_visible)) in
+      let y = ref (y_of_value first_value) in
       C.move_to cr ~x:0.0 ~y:!y;
       begin try
         values |> Array.iter (fun (time, value) ->
