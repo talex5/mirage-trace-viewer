@@ -34,6 +34,10 @@ val interactions : t -> (time * interaction * t) list
 (** Return the times when the thread was running. *)
 val activations : t -> (time * time) list
 
+(** Does the thread end because it was resolved, or just because we didn't
+ * see any more events? *)
+val resolved : t -> bool
+
 (** Parse a trace file, returning the root thread. *)
 val from_channel : in_channel -> vat
 val of_sexp : Sexplib.Sexp.t list -> vat

@@ -204,6 +204,7 @@ module Make (C : CANVAS) = struct
 
     draw_grid v cr expose_min_x expose_max_x;
 
+    (* Draw the thread lines. *)
     let visible_t_min = View.time_of_x v expose_min_x in
     let visible_t_max = View.time_of_x v expose_max_x in
     let visible_threads = View.visible_threads v (visible_t_min, visible_t_max) in
@@ -224,6 +225,12 @@ module Make (C : CANVAS) = struct
       | Some child when Thread.y child <> Thread.y t ->
           line v cr (Thread.end_time t) t child
       | _ -> () end;
+      if not (Thread.resolved t) && end_x -. start_x > 4.0 then (
+        C.move_to cr ~x:end_x ~y;
+        C.line_to cr ~x:(end_x -. 6.) ~y:(y -. 4.);
+        C.line_to cr ~x:(end_x -. 6.) ~y:(y +. 4.);
+        C.fill cr;
+      )
     );
 
     activation cr;

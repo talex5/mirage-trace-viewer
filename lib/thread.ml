@@ -8,6 +8,7 @@ type t = {
   thread_type : string;
   tid : int;
   start_time : time;
+  mutable resolved : bool;
   mutable end_time : time;
   mutable creates : t list;
   mutable becomes : t option;
@@ -59,6 +60,7 @@ let make_thread ~tid ~start_time ~thread_type = {
   interactions = [];
   activations = [];
   failure = None;
+  resolved = false;
   y = -.infinity;
 }
 
@@ -136,10 +138,12 @@ let of_sexp events =
         let b = get_thread b in
         a.interactions <- (time, Resolve, b) :: a.interactions;
         b.failure <- failure;
-        b.end_time <- time
+        b.end_time <- time;
+        b.resolved <- true
     | Becomes (a, b) ->
         let a = get_thread a in
         a.end_time <- time;
+        a.resolved <- true;
         assert (a.becomes = None);
         let b = Some (get_thread b) in
         a.becomes <- b;
@@ -218,6 +222,7 @@ let activations t = t.activations
 let failure t = t.failure
 let y t = t.y
 let id t = t.tid
+let resolved t = t.resolved
 
 let set_y t y = t.y <- y
 
