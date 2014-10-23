@@ -158,12 +158,6 @@ let scroll_bounds v =
 let visible_threads v visible_time_range =
   Layout.IT.overlapping_interval v.layout visible_time_range
 
-let set_size v width height =
-  let scale_factor = width /. v.view_width in
-  v.view_width <- width;
-  v.view_height <- height;
-  set_scale v (v.scale *. scale_factor)
-
 (** Set [view_start_time], within the allowed limits.
  * Returns the new horizontol scrollbar position. *)
 let set_start_time v t =
@@ -174,6 +168,13 @@ let set_start_time v t =
     |> min (trace_end_time -. ((v.view_width -. h_margin) /. v.scale))
     |> max (trace_start_time -. (h_margin /. v.scale));
   (v.view_start_time -. trace_start_time) *. v.scale
+
+let set_size v width height =
+  let scale_factor = width /. v.view_width in
+  v.view_width <- width;
+  v.view_height <- height;
+  set_scale v (v.scale *. scale_factor);
+  set_start_time v v.view_start_time |> ignore
 
 let set_view_y v y =
   let focal_y = y
