@@ -300,7 +300,7 @@ module Make (C : CANVAS) = struct
           match Thread.becomes t with
           | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
           | _ -> end_x in
-        draw_labels cr ~v ~y ~min_x:start_x ~max_x:end_x (Thread.labels t)
+        draw_labels cr ~v ~y ~min_x:start_x ~max_x:(min end_x v.View.view_width) (Thread.labels t)
       )
     );
 
