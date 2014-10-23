@@ -54,7 +54,7 @@ let collect_events top =
   Array.sort by_second_time by_second;
   (by_first, by_second)
 
-let v_projection_for_focus ~height focal_y =
+let v_projection_for_focus ~height ~view_height focal_y =
   (* Hack: because we scale so that y=0 is always at the top and y=h is always
    * at the bottom, we need to adjust the scale factor to keep the lengths around
    * focal_y constant. I couldn't figure out the correct formula for this. *)
@@ -62,11 +62,11 @@ let v_projection_for_focus ~height focal_y =
     if focal_y < height /. 2. then (
       let d = focal_y /. 500. in
       let top_unscaled = (1. -. exp d) /. (1. +. exp d) in
-      500. +. (top_unscaled *. 250.)
+      view_height *. (0.5 +. (top_unscaled *. 0.25))
     ) else (
       let d = (focal_y -. height) /. 500. in
       let bottom_unscaled = (1. -. exp d) /. (1. +. exp d) in
-      500. -. (bottom_unscaled *. 250.)
+      view_height *. (0.5 -. (bottom_unscaled *. 0.25))
     ) in
 
   let hyp_project d =
@@ -92,7 +92,7 @@ let make ~view_width ~view_height ~vat =
     view_width;
     view_height;
     view_start_time = Thread.start_time top_thread -. (h_margin /. scale);
-    v_projection = v_projection_for_focus ~height 0.0;
+    v_projection = v_projection_for_focus ~height ~view_height 0.0;
     height;
     grid_step = calc_grid_step scale;
     layout;
@@ -173,6 +173,7 @@ let set_size v width height =
   let scale_factor = width /. v.view_width in
   v.view_width <- width;
   v.view_height <- height;
+  v.v_projection <- v_projection_for_focus ~height:v.height ~view_height:v.view_height v.v_projection.focal_y;
   set_scale v (v.scale *. scale_factor);
   set_start_time v v.view_start_time |> ignore
 
@@ -180,7 +181,7 @@ let set_view_y v y =
   let focal_y = y
     |> min (v.height +. v_margin)
     |> max (-. v_margin) in
-  v.v_projection <- v_projection_for_focus ~height:v.height focal_y;
+  v.v_projection <- v_projection_for_focus ~height:v.height ~view_height:v.view_height focal_y;
   focal_y
 
 (** Set focal_y so that [y] appears at [view_y]. *)
@@ -190,7 +191,7 @@ let set_view_y_so v y view_y =
     if i = 0 then ()
     else (
       let f = (lo +. high) /. 2. in
-      v.v_projection <- v_projection_for_focus ~height:v.height f;
+      v.v_projection <- v_projection_for_focus ~height:v.height ~view_height:v.view_height f;
       let this_view_y = view_y_of_y v y in
       let d = this_view_y -. view_y in
       if d < 1. then aux lo f (i - 1)
