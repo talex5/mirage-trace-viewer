@@ -163,7 +163,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
       if time_at_pointer <> start_time || y_at_pointer <> start_y then (
         View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
         View.set_view_y_so v start_y y |> ignore;
-        render ();
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
       );
       Js._false in
 
@@ -215,14 +215,14 @@ let attach (c:Dom_html.canvasElement Js.t) v =
         if t_new <> start_time || start_y <> y_new then (
           View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
           View.set_view_y_so v start_y view_y_new |> ignore;
-          render ();
+          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
         let (x0, _) = rel_touch_coords touch0 in
         let (x1, _) = rel_touch_coords touch1 in
         View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
         View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
-        render ();
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
     | _ -> ()
     end;
     Js._false in
