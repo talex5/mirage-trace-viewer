@@ -7,7 +7,8 @@ type time = float
 type t = {
   thread_type : string;
   tid : int;
-  start_time : time;
+  mutable show_creation : bool;
+  mutable start_time : time;
   mutable resolved : bool;
   mutable end_time : time;
   mutable creates : t list;
@@ -53,6 +54,7 @@ let make_thread ~tid ~start_time ~thread_type = {
   thread_type;
   tid;
   start_time;
+  show_creation = true;
   end_time = infinity;
   creates = [];
   becomes = None;
@@ -73,7 +75,44 @@ let counter_value c =
   | [] -> 0
   | (_, v) :: _ -> v
 
-let of_sexp events =
+(** Time of first interaction.
+ * None if there isn't one, of if a label occurs first. *)
+let first_interaction t =
+  let rec aux = function
+    | [] -> None
+    | [i] -> Some i
+    | _::xs -> aux xs in
+  let i = aux t.interactions in
+  match t.labels, i with
+  | ((l_time, _) :: _), Some (i_time, _, _) when l_time < i_time -> None
+  | _ -> i
+
+(** If a bind-type thread's parent is still alive when it wakes up,
+ * adjust its start time to its wake up time. This reduces visual clutter. *)
+let rec simplify_binds parent =
+  let relocs = ref [] in
+  parent.creates <- parent.creates |> List.filter (fun t ->
+    simplify_binds t;
+    begin match t.thread_type, parent.becomes with
+    | _, Some became when became == t -> true
+    | ("bind" | "try"), _ ->
+        begin match first_interaction t with
+        | Some (wake_time, Read, other) ->
+            t.show_creation <- false;
+            t.start_time <- wake_time;
+            if other = parent then true
+            else (
+              relocs := (t, other) :: !relocs;
+              false
+            )
+        | _ -> true end
+    | _ -> true end;
+  );
+  !relocs |> List.iter (fun (t, other) ->
+    other.creates <- t :: other.creates;
+  )
+
+let of_sexp ?(simplify=true) events =
   let trace_start_time =
     match events with
     | [] -> failwith "No events!"
@@ -174,18 +213,18 @@ let of_sexp events =
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
     let labels =
-      match t.labels with
-      | [] -> [t.start_time, string_of_int t.tid]
-      | labels -> labels in
-    let labels =
       match t.failure with
-      | None -> labels
-      | Some failure -> (t.end_time, failure) :: labels in
+      | None -> t.labels
+      | Some failure -> (t.end_time, failure) :: t.labels in
     if t.end_time = infinity then (
       (* It probably got GC'd, but we don't see that. Make it disappear soon after its last event. *)
       t.end_time <- last_event_time t +. 0.000_001;
     );
     t.labels <- List.rev labels;
+  );
+  if simplify then simplify_binds top_thread;
+  top_thread |> iter (fun t ->
+    if t.labels = [] then t.labels <- [t.start_time, string_of_int t.tid]
   );
   counters |> Hashtbl.iter (fun name mc ->
     let values = List.rev mc.mc_values |> List.map (fun (t, v) -> (t, float_of_int v)) |> Array.of_list in
@@ -223,6 +262,7 @@ let failure t = t.failure
 let y t = t.y
 let id t = t.tid
 let resolved t = t.resolved
+let show_creation t = t.show_creation
 
 let set_y t y = t.y <- y
 
@@ -232,9 +272,9 @@ let compare a b =
   | 0 -> compare a.tid b.tid
   | r -> r
 
-let from_channel ch =
+let from_channel ?simplify ch =
   try
-    Sexplib.Sexp.input_sexps ch |> of_sexp
+    Sexplib.Sexp.input_sexps ch |> of_sexp ?simplify
   with Sexplib.Pre_sexp.Of_sexp_error (ex, t) ->
     failwith (Printf.sprintf "Error parsing '%s': %s" (Sexplib.Std.string_of_sexp t) (Printexc.to_string ex))
 

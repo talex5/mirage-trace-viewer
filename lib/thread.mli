@@ -17,6 +17,9 @@ val thread_type : t -> string
 val start_time : t -> time
 val end_time : t -> time
 
+(** For simplified binds, we don't show the creating thread (parent might no longer exist). *)
+val show_creation : t -> bool
+
 (** Threads created by this one, in *reverse* order. *)
 val creates : t -> t list
 
@@ -39,8 +42,8 @@ val activations : t -> (time * time) list
 val resolved : t -> bool
 
 (** Parse a trace file, returning the root thread. *)
-val from_channel : in_channel -> vat
-val of_sexp : Sexplib.Sexp.t list -> vat
+val from_channel : ?simplify:bool -> in_channel -> vat
+val of_sexp : ?simplify:bool -> Sexplib.Sexp.t list -> vat
 
 val set_y : t -> float -> unit
 val y : t -> float

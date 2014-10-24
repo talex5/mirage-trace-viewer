@@ -63,6 +63,22 @@ module Make (C : CANVAS) = struct
     C.line_to cr ~x:(View.x_of_time v time) ~y:(View.y_of_thread v recv);
     C.stroke cr
 
+  let draw_arrow_head_v cr ~x ~y ~arrow_head_y =
+    C.line_to cr ~x ~y:arrow_head_y;
+    C.stroke cr;
+    C.move_to cr ~x ~y;
+    C.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
+    C.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
+    C.fill cr
+
+  let draw_arrow_head_h cr ~x ~y ~arrow_head_x =
+    C.line_to cr ~x:arrow_head_x ~y;
+    C.stroke cr;
+    C.move_to cr ~x ~y;
+    C.line_to cr ~x:arrow_head_x ~y:(y +. arrow_width);
+    C.line_to cr ~x:arrow_head_x ~y:(y -. arrow_width);
+    C.fill cr
+
   let arrow v cr src src_time recv recv_time (r, g, b) =
     let width = View.width_of_timespan v (recv_time -. src_time) in
     let alpha = 1.0 -. (min 1.0 (width /. 6000.)) in
@@ -75,19 +91,12 @@ module Make (C : CANVAS) = struct
         let recv_y = View.y_of_thread v recv in
 
         C.move_to cr ~x:src_x ~y:src_y;
-        let arrow_head_y =
-          if src_y < recv_y then recv_y -. arrow_height
-          else recv_y +. arrow_height in
-        let x = View.clip_x_of_time v recv_time in
-        C.line_to cr ~x ~y:arrow_head_y;
-        C.stroke cr;
 
-        C.move_to cr ~x ~y:arrow_head_y;
-        C.line_to cr ~x:(x +. arrow_width) ~y:arrow_head_y;
-        C.line_to cr ~x ~y:recv_y;
-        C.line_to cr ~x:(x -. arrow_width) ~y:arrow_head_y;
-        C.line_to cr ~x ~y:arrow_head_y;
-        C.fill cr
+        let x = View.clip_x_of_time v recv_time in
+        let d = recv_y -. src_y in
+        if d < -.arrow_height then draw_arrow_head_v cr ~x ~y:recv_y ~arrow_head_y:(recv_y +. arrow_height)
+        else if d > arrow_height then draw_arrow_head_v cr ~x ~y:recv_y ~arrow_head_y:(recv_y -. arrow_height)
+        else draw_arrow_head_h cr ~x ~y:recv_y ~arrow_head_x:(x -. arrow_height)
       )
     )
 
@@ -219,7 +228,8 @@ module Make (C : CANVAS) = struct
       C.stroke cr;
       Thread.creates t |> List.iter (fun child ->
         let child_start_time = Thread.start_time child in
-        line v cr child_start_time t child
+        if Thread.show_creation child then
+          line v cr child_start_time t child
       );
       begin match Thread.becomes t with
       | Some child when Thread.y child <> Thread.y t ->
