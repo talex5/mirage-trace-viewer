@@ -27,6 +27,18 @@ module type CANVAS = sig
   val paint : ?alpha:float -> context -> unit
 end
 
+(* Find a place to put the label for the next stat line, ideally close to y. *)
+let insert_label y stat_labels =
+  let rec aux (y:float) = function
+    | [] -> y, [y]
+    | y2 :: ys when y +. 16. < y2 -> y, (y :: y2 :: ys)
+    | y2 :: ys ->
+        let y, ys = aux (max y (y2 +. 16.)) ys in
+        y, (y2 :: ys) in
+  let y, new_stats = aux y !stat_labels in
+  stat_labels := new_stats;
+  y
+
 module Make (C : CANVAS) = struct
   let arrow_width = 4.
   let arrow_height = 10.
@@ -39,8 +51,11 @@ module Make (C : CANVAS) = struct
   let type_label cr =
     C.set_source_rgb cr ~r:0.5 ~g:0.5 ~b:0.5
 
-  let counter_line cr =
-    C.set_source_rgb cr ~r:1.0 ~g:0.0 ~b:0.0
+  let counter_line i cr =
+    match i mod 3 with
+    | 0 -> C.set_source_rgb cr ~r:1.0 ~g:0.0 ~b:0.0
+    | 1 -> C.set_source_rgb cr ~r:1.0 ~g:0.5 ~b:0.0
+    | _ -> C.set_source_rgb cr ~r:0.8 ~g:0.0 ~b:1.0
 
   let anonymous_thread cr =
     C.set_line_width cr 2.0;
@@ -335,8 +350,9 @@ module Make (C : CANVAS) = struct
       )
     );
 
-    counter_line cr;
-    Thread.counters vat |> List.iter (fun counter ->
+    let stat_labels = ref [] in
+    Thread.counters vat |> List.iteri (fun i counter ->
+      counter_line i cr;
       let open Counter in
       let range = counter.max -. counter.min in
       let v_scale = v.View.view_height /. range in
@@ -363,6 +379,7 @@ module Make (C : CANVAS) = struct
       with Exit -> () end;
       C.line_to cr ~x:v.View.view_width ~y:!y;
       C.stroke cr;
-      draw_label cr ~v ~y:(!y +. 14.) ~min_x:0.0 ~max_x:v.View.view_width v.View.view_width counter.name |> ignore
+      let y = insert_label (!y +. 16.) stat_labels in
+      draw_label cr ~v ~y ~min_x:0.0 ~max_x:v.View.view_width v.View.view_width counter.name |> ignore
     );
 end
