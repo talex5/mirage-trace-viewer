@@ -208,7 +208,7 @@ let of_sexp ?(simplify=true) events =
         let new_value = counter_value c + amount in
         c.mc_values <- (time, new_value) :: c.mc_values;
         let a = get_thread a in
-        a.labels <- (time, counter ^ "+" ^ string_of_int amount) :: a.labels
+        a.labels <- (time, Printf.sprintf "%s%+d" counter amount) :: a.labels
   );
   switch top_thread.end_time None;
   top_thread |> iter (fun t ->
