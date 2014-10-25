@@ -373,13 +373,13 @@ module Make (C : CANVAS) = struct
           C.line_to cr ~x ~y:!y;
           let new_y = y_of_value value in
           C.line_to cr ~x ~y:new_y;
+          if x > v.View.view_width then raise Exit;
           y := new_y;
-          if x > v.View.view_width then raise Exit
         )
       with Exit -> () end;
       C.line_to cr ~x:v.View.view_width ~y:!y;
       C.stroke cr;
-      let y = insert_label (!y +. 16.) stat_labels in
+      let y = insert_label (max 16. (!y -. 2.)) stat_labels in
       draw_label cr ~v ~y ~min_x:0.0 ~max_x:v.View.view_width v.View.view_width counter.name |> ignore
     );
 end
