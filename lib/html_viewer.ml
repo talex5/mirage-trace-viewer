@@ -85,6 +85,8 @@ let () =
   let cb () = !resize_callbacks |> List.iter (fun f -> f ()) in
   Js.Unsafe.global##resizeCanvasElements <- Js.wrap_callback cb
 
+let control_height = 16.
+
 (** Connect callbacks to render view [v] on canvas [c]. *)
 let attach (c:Dom_html.canvasElement Js.t) v =
   let rel_coords (x, y) =
@@ -107,17 +109,69 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     let y = ev##pageY in
     rel_coords (x, y) in
 
+  let draw_controls ctx =
+    let top = v.View.view_height in
+    ctx##fillStyle <- Js.string "#888";
+    ctx##rect (0.0, top, v.View.view_width, v.View.view_height);
+    ctx##fill ();
+    ctx##beginPath ();
+    ctx##strokeStyle <- Js.string "#fff";
+    ctx##moveTo (2.0, top +. control_height /. 2.);
+    ctx##lineTo (30.0, top +. control_height /. 2.);
+    ctx##moveTo (34.0, top +. control_height /. 2.);
+    ctx##lineTo (62.0, top +. control_height /. 2.);
+    ctx##moveTo (48.0, top);
+    ctx##lineTo (48.0, v.View.view_height +. control_height);
+    ctx##stroke ();
+    ctx##beginPath () in
+
   let render_queued = ref false in
   let render_now () =
     render_queued := false;
     let ctx = c##getContext(Dom_html._2d_) in
     ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height)) in
+    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
+    draw_controls ctx in
 
   let render () =
     if not (!render_queued) then (
       Dom_html._requestAnimationFrame (Js.wrap_callback (fun _ev -> render_now ()));
       render_queued := true
+    ) in
+
+  let motion_id = ref None in
+  let mouse_timeout = ref None in
+  let cancel_mouse_timeouts () =
+    begin match !mouse_timeout with
+    | None -> ()
+    | Some t -> Dom_html.window##clearTimeout (t); mouse_timeout := None end;
+    begin match !motion_id with
+    | None -> ()
+    | Some id -> Dom_html.removeEventListener id; motion_id := None end in
+
+  let last_focal_x = ref 0.0 in   (* Focus for zoom buttons *)
+  let button_zoom factor =
+    let zoom factor =
+      let t_old = View.time_of_x v !last_focal_x in
+      View.set_scale v (v.View.scale *. factor);
+      let t_new = View.time_of_x v !last_focal_x in
+      let _hscroll = View.set_start_time v (v.View.view_start_time -. (t_new -. t_old)) in
+      render () in
+
+    let rec timeout _t =
+      zoom factor;
+      cancel_mouse_timeouts ();
+      mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 200.0)) in
+
+    zoom factor;
+    cancel_mouse_timeouts ();
+    mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 500.0)) in
+
+  let control_click ~x =
+    if x < 32. then (
+      button_zoom (1. /. 1.2);
+    ) else if x < 64. then (
+      button_zoom 1.2;
     ) in
 
   let resize () =
@@ -127,11 +181,12 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     c##height <- view_height;
     let view_width = float_of_int view_width in
     let view_height = float_of_int view_height in
-    View.set_size v view_width view_height;
+    View.set_size v view_width (view_height -. control_height);
     render () in
 
   let zoom (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
     let (x, _) = rel_mouse_coords ev in
+    last_focal_x := x;
     let t_at_pointer = View.time_of_x v x in
 
     if dy < 0 then
@@ -143,32 +198,34 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     render ();
     Js._false in
 
-  let motion_id = ref None in
-
+  (* (also called for leave events) *)
   let mouse_up _ev =
-    begin match !motion_id with
-    | None -> ()
-    | Some id -> Dom_html.removeEventListener id; motion_id := None end;
+    cancel_mouse_timeouts ();
     Js._false in
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
     let (x, y) = rel_mouse_coords ev in
-    let start_time = View.time_of_x v x in
-    let start_y = View.y_of_view_y v y in
+    if y >= v.View.view_height then control_click ~x
+    else (
+      let start_time = View.time_of_x v x in
+      let start_y = View.y_of_view_y v y in
+      last_focal_x := x;
 
-    let motion (ev:Dom_html.mouseEvent Js.t) =
-      let (x, y) = rel_mouse_coords ev in
-      let time_at_pointer = View.time_of_x v x in
-      let y_at_pointer = View.y_of_view_y v y in
-      if time_at_pointer <> start_time || y_at_pointer <> start_y then (
-        View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
-        View.set_view_y_so v start_y y |> ignore;
-        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
-      );
-      Js._false in
+      let motion (ev:Dom_html.mouseEvent Js.t) =
+        let (x, y) = rel_mouse_coords ev in
+        last_focal_x := x;
+        let time_at_pointer = View.time_of_x v x in
+        let y_at_pointer = View.y_of_view_y v y in
+        if time_at_pointer <> start_time || y_at_pointer <> start_y then (
+          View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
+          View.set_view_y_so v start_y y |> ignore;
+          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+        );
+        Js._false in
 
-    let _ = mouse_up () in
-    motion_id := Some (Dom_html.addEventListener c Dom_html.Event.mousemove (Dom_html.handler motion) (Js._true));
+      cancel_mouse_timeouts ();
+      motion_id := Some (Dom_html.addEventListener c Dom_html.Event.mousemove (Dom_html.handler motion) (Js._true))
+    );
     Js._false in
 
   let double_click _ev =
@@ -192,24 +249,32 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     begin match touches ev##touches with
     | [t] ->
         let (x, y) = rel_touch_coords t in
-        touch := Touch_drag (
-          View.time_of_x v x,
-          View.view_y_of_y v y
+        last_focal_x := x;
+        if y >= v.View.view_height then control_click ~x
+        else (
+          touch := Touch_drag (
+            View.time_of_x v x,
+            View.view_y_of_y v y
+          )
         )
     | [t0; t1] ->
         let (x0, _) = rel_touch_coords t0 in
         let (x1, _) = rel_touch_coords t1 in
+        last_focal_x := x0;
         touch := Touch_zoom (
           (View.time_of_x v x0),
           (View.time_of_x v x1)
         )
-    | _ -> touch := Touch_none end;
+    | _ ->
+        cancel_mouse_timeouts ();
+        touch := Touch_none end;
     Js._false in
 
   let touch_move (ev:Dom_html.touchEvent Js.t) =
     begin match !touch, touches ev##touches with
     | Touch_drag (start_time, start_y), [touch] ->
         let x_new, view_y_new = rel_touch_coords touch in
+        last_focal_x := x_new;
         let t_new = View.x_of_time v x_new in
         let y_new = View.y_of_view_y v view_y_new in
         if t_new <> start_time || start_y <> y_new then (
@@ -220,6 +285,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
         let (x0, _) = rel_touch_coords touch0 in
         let (x1, _) = rel_touch_coords touch1 in
+        last_focal_x := x0;
         View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
         View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
         Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
