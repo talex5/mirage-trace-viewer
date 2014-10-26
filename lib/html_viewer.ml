@@ -109,10 +109,24 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     let y = ev##pageY in
     rel_coords (x, y) in
 
+  (* Return the size of the scroll thumb, the width of the scroll well and the
+   * thumb start position. If the thumb would be too small, limit it and adjust
+   * the well size to make things fit. *)
+  let hscroll_values () =
+    let (xlo, xhi, xsize, xvalue), _y = View.scroll_bounds v in
+    let range = xhi -. xlo in
+    let well_width = v.View.view_width -. 64. in
+    let xsize = (xsize /. range) *. well_width in
+    let xsize, well_width =
+      if xsize < 16. then (16., well_width -. (16. -. xsize))
+      else (xsize, well_width) in
+    let xstart = ((xvalue -. xlo) /. range) *. well_width +. 64. in
+    (xsize, well_width, xstart) in
+
   let draw_controls ctx =
     let top = v.View.view_height in
     ctx##fillStyle <- Js.string "#888";
-    ctx##rect (0.0, top, v.View.view_width, v.View.view_height);
+    ctx##rect (0.0, top, v.View.view_width, control_height);
     ctx##fill ();
     ctx##beginPath ();
     ctx##strokeStyle <- Js.string "#fff";
@@ -123,7 +137,14 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ctx##moveTo (48.0, top);
     ctx##lineTo (48.0, v.View.view_height +. control_height);
     ctx##stroke ();
-    ctx##beginPath () in
+    ctx##beginPath ();
+    (* Scrollbar *)
+    let xsize, _well_width, xstart = hscroll_values () in
+    ctx##fillStyle <- Js.string "#fff";
+    ctx##rect (xstart, top, xsize, control_height);
+    ctx##fill ();
+    ctx##beginPath ();
+    in
 
   let render_queued = ref false in
   let render_now () =
@@ -172,6 +193,27 @@ let attach (c:Dom_html.canvasElement Js.t) v =
       button_zoom (1. /. 1.2);
     ) else if x < 64. then (
       button_zoom 1.2;
+    ) else (
+      let top_thread = Thread.top_thread v.View.vat in
+      let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
+      let scroll_to_x x =
+        let xsize, well_width, _ = hscroll_values () in
+        let x = x -. xsize /. 2. in
+        let frac = (x -. 64.) /. well_width in
+        View.set_start_time v (Thread.start_time top_thread +. time_range *. frac) |> ignore;
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore in
+
+      scroll_to_x x;
+
+      let last_x = ref x in
+      let motion (ev:Dom_html.mouseEvent Js.t) =
+        let (new_x, _y) = rel_mouse_coords ev in
+        if new_x <> !last_x then scroll_to_x new_x;
+        last_x := new_x;
+        Js._false in
+
+      cancel_mouse_timeouts ();
+      motion_id := Some (Dom_html.addEventListener c Dom_html.Event.mousemove (Dom_html.handler motion) (Js._true))
     ) in
 
   let resize () =
