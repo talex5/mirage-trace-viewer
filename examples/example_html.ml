@@ -15,7 +15,7 @@ let v =
     let scale = (v.View.view_width -. View.h_margin *. 2.) /. (t_max -. t_min) in
     View.set_scale v scale;
     View.set_start_time v t_min |> ignore
-  with Not_found -> print_endline "Not_found" end;
+  with Not_found -> () end;
   v
 
 let () =
