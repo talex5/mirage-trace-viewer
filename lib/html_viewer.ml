@@ -161,7 +161,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     let rec timeout _t =
       zoom factor;
       cancel_mouse_timeouts ();
-      mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 200.0)) in
+      mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 50.0)) in
 
     zoom factor;
     cancel_mouse_timeouts ();
