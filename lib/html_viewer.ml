@@ -275,9 +275,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     begin match touches ev##touches with
     | [t] ->
         let (x, y) = rel_event_coords t in
-        last_focal_x := x;
         if y >= v.View.view_height then control_click ~x
         else (
+          last_focal_x := x;
           touch := Touch_drag (
             View.time_of_x v x,
             View.view_y_of_y v y
