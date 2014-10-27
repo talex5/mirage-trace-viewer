@@ -89,25 +89,9 @@ let control_height = 16.
 
 (** Connect callbacks to render view [v] on canvas [c]. *)
 let attach (c:Dom_html.canvasElement Js.t) v =
-  let rel_coords (x, y) =
-    let rec adjust (elem:Dom_html.element Js.t) (x, y) = 
-      let x = x - elem##offsetLeft + elem##scrollLeft in
-      let y = y - elem##offsetTop + elem##scrollTop in
-      Js.Opt.case (elem##offsetParent)
-        (fun () ->
-          (float_of_int x, float_of_int y))
-        (fun parent -> adjust parent (x, y)) in
-    adjust (c :> Dom_html.element Js.t) (x, y) in
-
-  let rel_mouse_coords ev =
-    let x = Js.Optdef.get (ev##pageX) (fun () -> ev##clientX) in
-    let y = Js.Optdef.get (ev##pageY) (fun () -> ev##clientY) in
-    rel_coords (x, y) in
-
-  let rel_touch_coords ev =
-    let x = ev##pageX in
-    let y = ev##pageY in
-    rel_coords (x, y) in
+  let rel_event_coords ev =
+    let (cx, cy) = Dom_html.elementClientPosition c in
+    (float_of_int (ev##clientX - cx), float_of_int (ev##clientY - cy)) in
 
   (* Return the size of the scroll thumb, the width of the scroll well and the
    * thumb start position. If the thumb would be too small, limit it and adjust
@@ -207,7 +191,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
 
       let last_x = ref x in
       let motion (ev:Dom_html.mouseEvent Js.t) =
-        let (new_x, _y) = rel_mouse_coords ev in
+        let (new_x, _y) = rel_event_coords ev in
         if new_x <> !last_x then scroll_to_x new_x;
         last_x := new_x;
         Js._false in
@@ -227,7 +211,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     render () in
 
   let zoom (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
-    let (x, _) = rel_mouse_coords ev in
+    let (x, _) = rel_event_coords ev in
     last_focal_x := x;
     let t_at_pointer = View.time_of_x v x in
 
@@ -246,7 +230,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
-    let (x, y) = rel_mouse_coords ev in
+    let (x, y) = rel_event_coords ev in
     if y >= v.View.view_height then control_click ~x
     else (
       let start_time = View.time_of_x v x in
@@ -254,7 +238,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
       last_focal_x := x;
 
       let motion (ev:Dom_html.mouseEvent Js.t) =
-        let (x, y) = rel_mouse_coords ev in
+        let (x, y) = rel_event_coords ev in
         last_focal_x := x;
         let time_at_pointer = View.time_of_x v x in
         let y_at_pointer = View.y_of_view_y v y in
@@ -290,7 +274,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     Dom.preventDefault ev;
     begin match touches ev##touches with
     | [t] ->
-        let (x, y) = rel_touch_coords t in
+        let (x, y) = rel_event_coords t in
         last_focal_x := x;
         if y >= v.View.view_height then control_click ~x
         else (
@@ -300,8 +284,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
           )
         )
     | [t0; t1] ->
-        let (x0, _) = rel_touch_coords t0 in
-        let (x1, _) = rel_touch_coords t1 in
+        let (x0, _) = rel_event_coords t0 in
+        let (x1, _) = rel_event_coords t1 in
         last_focal_x := x0;
         touch := Touch_zoom (
           (View.time_of_x v x0),
@@ -315,7 +299,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let touch_move (ev:Dom_html.touchEvent Js.t) =
     begin match !touch, touches ev##touches with
     | Touch_drag (start_time, start_y), [touch] ->
-        let x_new, view_y_new = rel_touch_coords touch in
+        let x_new, view_y_new = rel_event_coords touch in
         last_focal_x := x_new;
         let t_new = View.x_of_time v x_new in
         let y_new = View.y_of_view_y v view_y_new in
@@ -325,8 +309,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
           Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
-        let (x0, _) = rel_touch_coords touch0 in
-        let (x1, _) = rel_touch_coords touch1 in
+        let (x0, _) = rel_event_coords touch0 in
+        let (x1, _) = rel_event_coords touch1 in
         last_focal_x := x0;
         View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
         View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
