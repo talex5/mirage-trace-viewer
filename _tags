@@ -1,8 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: 5650cb50b1814e37e33c6081e279d6f8)
+# DO NOT EDIT (digest: 124871a51588a02c1687277c2aa939e8)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
+true: annot, bin_annot
 <**/.svn>: -traverse
 <**/.svn>: not_hygienic
 ".bzr": -traverse
@@ -22,44 +23,50 @@
 <gtk/gtk_viewer.{native,byte}>: pkg_js_of_ocaml
 <gtk/gtk_viewer.{native,byte}>: pkg_js_of_ocaml.syntax
 <gtk/gtk_viewer.{native,byte}>: pkg_lablgtk2
+<gtk/gtk_viewer.{native,byte}>: pkg_ocplib-endian.bigstring
 <gtk/gtk_viewer.{native,byte}>: pkg_sexplib
 <gtk/gtk_viewer.{native,byte}>: pkg_sexplib.syntax
 <gtk/gtk_viewer.{native,byte}>: use_mirage-trace-viewer
-<gtk/*.ml{,i}>: pkg_cairo2
-<gtk/*.ml{,i}>: pkg_cairo2.lablgtk2
-<gtk/*.ml{,i}>: pkg_itv-tree
-<gtk/*.ml{,i}>: pkg_js_of_ocaml
-<gtk/*.ml{,i}>: pkg_js_of_ocaml.syntax
-<gtk/*.ml{,i}>: pkg_lablgtk2
-<gtk/*.ml{,i}>: pkg_sexplib
-<gtk/*.ml{,i}>: pkg_sexplib.syntax
-<gtk/*.ml{,i}>: use_mirage-trace-viewer
+<gtk/*.ml{,i,y}>: pkg_cairo2
+<gtk/*.ml{,i,y}>: pkg_cairo2.lablgtk2
+<gtk/*.ml{,i,y}>: pkg_itv-tree
+<gtk/*.ml{,i,y}>: pkg_js_of_ocaml
+<gtk/*.ml{,i,y}>: pkg_js_of_ocaml.syntax
+<gtk/*.ml{,i,y}>: pkg_lablgtk2
+<gtk/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
+<gtk/*.ml{,i,y}>: pkg_sexplib
+<gtk/*.ml{,i,y}>: pkg_sexplib.syntax
+<gtk/*.ml{,i,y}>: use_mirage-trace-viewer
 # Executable mirage-trace-viewer-precompute
 <lib/precompute.{native,byte}>: pkg_itv-tree
 <lib/precompute.{native,byte}>: pkg_js_of_ocaml
 <lib/precompute.{native,byte}>: pkg_js_of_ocaml.syntax
+<lib/precompute.{native,byte}>: pkg_ocplib-endian.bigstring
 <lib/precompute.{native,byte}>: pkg_sexplib
 <lib/precompute.{native,byte}>: pkg_sexplib.syntax
 <lib/precompute.{native,byte}>: use_mirage-trace-viewer
-<lib/*.ml{,i}>: pkg_itv-tree
-<lib/*.ml{,i}>: pkg_js_of_ocaml
-<lib/*.ml{,i}>: pkg_js_of_ocaml.syntax
-<lib/*.ml{,i}>: pkg_sexplib
-<lib/*.ml{,i}>: pkg_sexplib.syntax
-<lib/*.ml{,i}>: use_mirage-trace-viewer
+<lib/*.ml{,i,y}>: pkg_itv-tree
+<lib/*.ml{,i,y}>: pkg_js_of_ocaml
+<lib/*.ml{,i,y}>: pkg_js_of_ocaml.syntax
+<lib/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
+<lib/*.ml{,i,y}>: pkg_sexplib
+<lib/*.ml{,i,y}>: pkg_sexplib.syntax
+<lib/*.ml{,i,y}>: use_mirage-trace-viewer
 # Executable example_html
 "examples/example_html.byte": pkg_itv-tree
 "examples/example_html.byte": pkg_js_of_ocaml
 "examples/example_html.byte": pkg_js_of_ocaml.syntax
+"examples/example_html.byte": pkg_ocplib-endian.bigstring
 "examples/example_html.byte": pkg_sexplib
 "examples/example_html.byte": pkg_sexplib.syntax
 "examples/example_html.byte": use_mirage-trace-viewer
-<examples/*.ml{,i}>: pkg_itv-tree
-<examples/*.ml{,i}>: pkg_js_of_ocaml
-<examples/*.ml{,i}>: pkg_js_of_ocaml.syntax
-<examples/*.ml{,i}>: pkg_sexplib
-<examples/*.ml{,i}>: pkg_sexplib.syntax
-<examples/*.ml{,i}>: use_mirage-trace-viewer
+<examples/*.ml{,i,y}>: pkg_itv-tree
+<examples/*.ml{,i,y}>: pkg_js_of_ocaml
+<examples/*.ml{,i,y}>: pkg_js_of_ocaml.syntax
+<examples/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
+<examples/*.ml{,i,y}>: pkg_sexplib
+<examples/*.ml{,i,y}>: pkg_sexplib.syntax
+<examples/*.ml{,i,y}>: use_mirage-trace-viewer
 # OASIS_STOP
 
 true: warn(A-4), strict_sequence

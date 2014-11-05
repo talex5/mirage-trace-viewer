@@ -112,11 +112,11 @@ let rec simplify_binds parent =
     other.creates <- t :: other.creates;
   )
 
-let of_sexp ?(simplify=true) events =
+let of_events ?(simplify=true) events =
   let trace_start_time =
     match events with
     | [] -> failwith "No events!"
-    | hd :: _ -> Event.((t_of_sexp hd).time) in
+    | hd :: _ -> Event.(hd.time) in
   let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"preexisting" in
   top_thread.end_time <- 0.0;
 
@@ -159,9 +159,8 @@ let of_sexp ?(simplify=true) events =
         | Some next -> running_thread := Some (time, next)
         | None -> running_thread := None in
 
-  events |> List.iter (fun sexp ->
+  events |> List.iter (fun ev ->
     let open Event in
-    let ev = t_of_sexp sexp in
     let time = ev.time -. trace_start_time in
     if time > top_thread.end_time then top_thread.end_time <- time;
 
@@ -246,6 +245,9 @@ let of_sexp ?(simplify=true) events =
   let by_thread_id a b = compare a.tid b.tid in
   top_thread.creates <- List.sort by_thread_id top_thread.creates;
   vat
+
+let of_sexp ?simplify events =
+  of_events ?simplify (List.map Event.t_of_sexp events)
 
 let top_thread v = v.top_thread
 let gc_periods v = v.gc

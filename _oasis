@@ -10,7 +10,7 @@ Library "mirage-trace-viewer"
   Path:       lib
   BuildTools: ocamlbuild
   Modules:    ITree, Html_viewer, Render, Counter, Event, Layout, Sorted_array, Thread, View
-  BuildDepends: itv-tree,sexplib,sexplib.syntax,js_of_ocaml,js_of_ocaml.syntax
+  BuildDepends: itv-tree,sexplib,sexplib.syntax,js_of_ocaml,js_of_ocaml.syntax,ocplib-endian.bigstring
   
 Executable "mirage-trace-viewer"
   Path:       gtk
