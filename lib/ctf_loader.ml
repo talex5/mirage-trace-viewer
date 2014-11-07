@@ -26,6 +26,7 @@ let from_channel ch =
   let events = ref [] in
   let pos = ref 0 in
   let packet_end = ref 0 in
+  let packet_content_end = ref 0 in
 
   let read64 () =
     let v = EndianBigstring.LittleEndian.get_int64 data !pos in
@@ -57,12 +58,14 @@ let from_channel ch =
       if Array1.get data (!pos + i) <> uuid.[i] then failwith "Packet UUID doesn't match!"
     done;
     pos := !pos + 16;
-    packet_end := packet_start + Int32.to_int (read32 ()) / 8 in
+    packet_end := packet_start + Int32.to_int (read32 ()) / 8;
+    packet_content_end := packet_start + Int32.to_int (read32 ()) / 8;
+    in
 
   while !pos < Array1.dim data do
     read_packet_header ();
 
-    while !pos < !packet_end do
+    while !pos < !packet_content_end do
       let time = read64 () in
       let op =
         match read8 () with
