@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 124871a51588a02c1687277c2aa939e8)
+# DO NOT EDIT (digest: 0e3d58ea3a268f71441b8c8e852d2c2b)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -52,6 +52,21 @@ true: annot, bin_annot
 <lib/*.ml{,i,y}>: pkg_sexplib
 <lib/*.ml{,i,y}>: pkg_sexplib.syntax
 <lib/*.ml{,i,y}>: use_mirage-trace-viewer
+# Executable mirage-trace-collect
+<collect/collect.{native,byte}>: pkg_str
+<collect/collect.{native,byte}>: pkg_threads
+<collect/collect.{native,byte}>: pkg_xen-gnt
+<collect/collect.{native,byte}>: pkg_xen-gnt.unix
+<collect/collect.{native,byte}>: pkg_xenstore.client
+<collect/collect.{native,byte}>: pkg_xenstore.unix
+<collect/collect.{native,byte}>: pkg_xenstore_transport.unix
+<collect/*.ml{,i,y}>: pkg_str
+<collect/*.ml{,i,y}>: pkg_threads
+<collect/*.ml{,i,y}>: pkg_xen-gnt
+<collect/*.ml{,i,y}>: pkg_xen-gnt.unix
+<collect/*.ml{,i,y}>: pkg_xenstore.client
+<collect/*.ml{,i,y}>: pkg_xenstore.unix
+<collect/*.ml{,i,y}>: pkg_xenstore_transport.unix
 # Executable example_html
 "examples/example_html.byte": pkg_itv-tree
 "examples/example_html.byte": pkg_js_of_ocaml

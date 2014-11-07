@@ -1,4 +1,4 @@
 B _build/
 S .
-PKG str lwt lwt.unix cairo2
+PKG str lwt lwt.unix cairo2 xen-gnt io-page
 EXT lwt

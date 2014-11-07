@@ -6,6 +6,10 @@ Authors:     Thomas Leonard
 License:     BSD-2-clause
 Plugins:     META (0.4), DevFiles (0.4)
 
+Flag collect
+  Description:        true to build mirage-trace-collect tool (requires xen-gnt.unix)
+  Default:            false
+
 Library "mirage-trace-viewer"
   Path:       lib
   BuildTools: ocamlbuild
@@ -24,6 +28,14 @@ Executable "mirage-trace-viewer-precompute"
   BuildTools: ocamlbuild
   MainIs:     precompute.ml
   BuildDepends: mirage-trace-viewer
+  CompiledObject: best
+
+Executable "mirage-trace-collect"
+  Build$:     flag(collect)
+  Path:       collect
+  BuildTools: ocamlbuild
+  MainIs:     collect.ml
+  BuildDepends: xen-gnt, xen-gnt.unix, xenstore.client, xenstore.unix, xenstore_transport.unix, threads, str
   CompiledObject: best
 
 Executable "example_html"
