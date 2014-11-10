@@ -10,6 +10,10 @@ Flag collect
   Description:        true to build mirage-trace-collect tool (requires xen-gnt.unix)
   Default:            false
 
+Flag gtk
+  Description:        true to build the GTK viewer
+  Default:            true
+
 Library "mirage-trace-viewer"
   Path:       lib
   BuildTools: ocamlbuild
@@ -18,6 +22,7 @@ Library "mirage-trace-viewer"
   
 Executable "mirage-trace-viewer"
   Path:       gtk
+  Build$:     flag(gtk)
   BuildTools: ocamlbuild
   MainIs:     gtk_viewer.ml
   BuildDepends: lablgtk2,cairo2.lablgtk2,cairo2,mirage-trace-viewer
