@@ -1,5 +1,3 @@
-default: all examples/example_html.js
-
 # OASIS_START
 # DO NOT EDIT (digest: a3c674b4239234cbbe53afe090018954)
 
@@ -41,7 +39,3 @@ configure:
 .PHONY: build doc test all install uninstall reinstall clean distclean configure
 
 # OASIS_STOP
-
-examples/example_html.js: build
-	./precompute.native examples/log-x86.sexp
-	js_of_ocaml --opt=3 +weak.js example_html.byte -I examples --file log-x86.bin -o $@

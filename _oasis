@@ -14,11 +14,27 @@ Flag gtk
   Description:        true to build the GTK viewer
   Default:            true
 
+Flag javascript
+  Description:        true to build the JavaScript viewer
+  Default:            true
+ 
+if flag(javascript)
+  PostBuildCommand: ./precompute.native examples/log-x86.sexp && js_of_ocaml --opt=3 +weak.js example_html.byte -I examples --file log-x86.bin -o examples/example_html.js
+
 Library "mirage-trace-viewer"
   Path:       lib
   BuildTools: ocamlbuild
-  Modules:    ITree, Html_viewer, Render, Counter, Event, Layout, Sorted_array, Thread, View
-  BuildDepends: itv-tree,sexplib,sexplib.syntax,js_of_ocaml,js_of_ocaml.syntax,ocplib-endian.bigstring
+  Modules:    ITree, Render, Counter, Event, Layout, Sorted_array, Thread, View
+  BuildDepends: itv-tree,sexplib,sexplib.syntax,ocplib-endian.bigstring
+  
+Library "mirage-trace-viewer.js"
+  Path:       js
+  Build$:     flag(javascript)
+  BuildTools: ocamlbuild
+  FindlibParent: mirage-trace-viewer
+  FindlibName: js
+  Modules:    Html_viewer
+  BuildDepends: mirage-trace-viewer,js_of_ocaml,js_of_ocaml.syntax
   
 Executable "mirage-trace-viewer"
   Path:       gtk
@@ -30,6 +46,7 @@ Executable "mirage-trace-viewer"
   
 Executable "mirage-trace-viewer-precompute"
   Path:       lib
+  Build$:     flag(javascript)
   BuildTools: ocamlbuild
   MainIs:     precompute.ml
   BuildDepends: mirage-trace-viewer
@@ -45,7 +62,8 @@ Executable "mirage-trace-collect"
 
 Executable "example_html"
   Path:	      examples
+  Build$:     flag(javascript)
   BuildTools: ocamlbuild
   MainIs:     example_html.ml
-  BuildDepends: mirage-trace-viewer
+  BuildDepends: mirage-trace-viewer.js
   CompiledObject: byte

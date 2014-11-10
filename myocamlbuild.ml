@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: ee35507c66d3bf88871a99252dcf6ff2) *)
+(* DO NOT EDIT (digest: 6808cf26a9c847092a98dd6b2bc648de) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -607,10 +607,14 @@ end
 open Ocamlbuild_plugin;;
 let package_default =
   {
-     MyOCamlbuildBase.lib_ocaml = [("mirage-trace-viewer", ["lib"], [])];
+     MyOCamlbuildBase.lib_ocaml =
+       [
+          ("mirage-trace-viewer", ["lib"], []);
+          ("mirage-trace-viewer.js", ["js"], [])
+       ];
      lib_c = [];
      flags = [];
-     includes = [("gtk", ["lib"]); ("examples", ["lib"])]
+     includes = [("js", ["lib"]); ("gtk", ["lib"]); ("examples", ["js"])]
   }
   ;;
 
@@ -618,6 +622,6 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 622 "myocamlbuild.ml"
+# 626 "myocamlbuild.ml"
 (* OASIS_STOP *)
 Ocamlbuild_plugin.dispatch dispatch_default;;
