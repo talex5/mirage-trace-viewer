@@ -24,6 +24,9 @@ type packet = {
   packet_data : log_buffer;
 }
 
+let error fmt =
+  Printf.ksprintf failwith fmt
+
 let order_packets = function
   | [] -> []
   | (first :: _) as packets ->
@@ -50,7 +53,7 @@ let packets data =
   let rec aux packet_start =
     if packet_start = Array1.dim data then []
     else (
-      (* Printf.printf "Read header at %d\n" !pos; *)
+      (* Printf.printf "Read header at %d\n" packet_start; *)
       let magic = EndianBigstring.LittleEndian.get_int32 data packet_start in
       if magic <> 0xc1fc1fc1l then failwith "Not a CTF log packet (bad magic)";
       for i = 0 to 15 do
@@ -59,11 +62,13 @@ let packets data =
       let packet_size = EndianBigstring.LittleEndian.get_int32 data (packet_start + 20) |> Int32.to_int in
       let packet_counter = EndianBigstring.LittleEndian.get_uint16 data (packet_start + 24) in
       let packet_content_size = EndianBigstring.LittleEndian.get_int32 data (packet_start + 26) |> Int32.to_int in
+      if packet_content_size > packet_size then
+        error "Packet at 0x%x has content_size (%d bits) > size (%d bits)" packet_start packet_content_size packet_size;
       let header_length = 30 in
       let first_event = packet_start + header_length in
       let packet_data = Array1.sub data first_event (packet_content_size / 8 - header_length) in
       let item = {packet_counter; packet_data} in
-      Printf.printf "Found packet 0x%x at offset %d\n" packet_counter packet_start;
+      (* Printf.printf "Found packet 0x%x at offset %d\n" packet_counter packet_start; *)
       item :: aux (packet_start + packet_size / 8)
     ) in
   order_packets (aux 0)
@@ -136,7 +141,7 @@ let from_channel ch =
         | 8 ->
             let duration = read64 () in
             Gc (Int64.to_float duration /. 1_000_000_000.)
-        | x -> failwith (Printf.sprintf "Unknown event op %d" x) in
+        | x -> error "Unknown event op %d" x in
       let event = {
         time = Int64.to_float time /. 1_000_000_000.;
         op;
