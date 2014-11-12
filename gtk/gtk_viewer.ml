@@ -24,6 +24,52 @@ end
 
 module R = Render.Make(Canvas)
 
+let export_as_svg v fname =
+  let surface = Cairo.SVG.create
+    ~fname
+    ~width:(v.View.view_width)
+    ~height:(v.View.view_height) in
+  let cr = Cairo.create surface in
+  Cairo.set_font_size cr 12.;
+  Cairo.select_font_face cr "Sans";
+  Cairo.set_line_join cr Cairo.JOIN_BEVEL;
+
+  (* Note: bounds are slightly smaller than the page because otherwise Cairo
+   * optimises the clip region out (but Inkscape displays things beyond the
+   * page boundaries). *)
+  Cairo.rectangle cr ~x:1.0 ~y:0.0 ~w:(v.View.view_width -. 2.0) ~h:v.View.view_height;
+  Cairo.clip cr;
+
+  R.render v cr ~expose_area:(
+    (0.0, 0.0),
+    (v.View.view_width, v.View.view_height)
+  );
+  Cairo.Surface.finish surface
+
+let show_menu ~parent ~v bev =
+  let menu = GMenu.menu () in
+  let packing = menu#add in
+  let export_svg = GMenu.menu_item ~packing ~label:"Export as SVG..." () in
+  export_svg#connect#activate ==> (fun () ->
+    let save_box = GWindow.file_chooser_dialog
+      ~action:`SAVE
+      ~parent
+      ~title:"Export as SVG"
+      ~position:`MOUSE
+      () in
+    save_box#add_button_stock `CANCEL `CANCEL;
+    save_box#add_select_button "Export" `ACCEPT;
+    save_box#connect#response ==> (function
+      | `ACCEPT ->
+          begin match save_box#filename with
+          | Some fname -> export_as_svg v fname; save_box#destroy ()
+          | None -> () end;
+      | _ -> save_box#destroy ()
+    );
+    save_box#show ()
+  );
+  menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
+
 let make vat =
   let top_thread = Thread.top_thread vat in
   GMain.init () |> ignore;
@@ -102,12 +148,14 @@ let make vat =
 
   let drag_start = ref None in
   area#event#connect#button_press ==> (fun ev ->
-    if GdkEvent.Button.button ev = 1 then (
-      let start_t = View.time_of_x v (GdkEvent.Button.x ev) in
-      let start_y = View.y_of_view_y v (GdkEvent.Button.y ev) in
-      drag_start := Some (start_t, start_y);
-      true;
-    ) else false
+    match GdkEvent.Button.button ev with
+    | 1 ->
+        let start_t = View.time_of_x v (GdkEvent.Button.x ev) in
+        let start_y = View.y_of_view_y v (GdkEvent.Button.y ev) in
+        drag_start := Some (start_t, start_y);
+        true;
+    | 3 -> show_menu ~parent:win ~v ev; true
+    | _ -> false
   );
 
   area#event#connect#motion_notify ==> (fun ev ->

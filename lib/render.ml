@@ -120,7 +120,7 @@ module Make (C : CANVAS) = struct
     C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
 
     let grid_step = v.View.grid_step in
-    let top = -. View.v_margin in
+    let top = 0.0 in
     let bottom = v.View.view_height in
 
     let area_start_time = View.time_of_x v area_start_x in
