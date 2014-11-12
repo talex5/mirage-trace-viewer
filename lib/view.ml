@@ -158,8 +158,6 @@ let scroll_bounds v =
 let visible_threads v visible_time_range =
   Layout.IT.overlapping_interval v.layout visible_time_range
 
-(** Set [view_start_time], within the allowed limits.
- * Returns the new horizontol scrollbar position. *)
 let set_start_time v t =
   let top_thread = Thread.top_thread v.vat in
   let trace_start_time = Thread.start_time top_thread in
@@ -184,7 +182,6 @@ let set_view_y v y =
   v.v_projection <- v_projection_for_focus ~height:v.height ~view_height:v.view_height focal_y;
   focal_y
 
-(** Set focal_y so that [y] appears at [view_y]. *)
 let set_view_y_so v y view_y =
   (* Binary search because I didn't pay attention in maths class. *)
   let rec aux lo high i =
@@ -216,3 +213,5 @@ let iter_interactions v t1 t2 f =
       if st < t1 || st >= t2 then f i
       (* else we already processed this one above *)
     )
+
+let dist_from_focus v t= Thread.y t -. v.v_projection.focal_y

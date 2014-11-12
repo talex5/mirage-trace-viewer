@@ -310,7 +310,7 @@ module Make (C : CANVAS) = struct
     );
 
     let text_visible t =
-      let vert_dist = Thread.y t -. View.(v.v_projection.focal_y) in
+      let vert_dist = View.dist_from_focus v t in
       vert_dist > -.2000. && vert_dist < 2000. in
 
     thread_label cr;
@@ -330,7 +330,7 @@ module Make (C : CANVAS) = struct
     );
 
     let text_visible t =
-      let vert_dist = Thread.y t -. View.(v.v_projection.focal_y) in
+      let vert_dist = View.dist_from_focus v t in
       vert_dist > -.1000. && vert_dist < 1000. in
 
     type_label cr;
