@@ -99,7 +99,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let hscroll_values () =
     let (xlo, xhi, xsize, xvalue), _y = View.scroll_bounds v in
     let range = xhi -. xlo in
-    let well_width = v.View.view_width -. 64. in
+    let well_width = View.view_width v -. 64. in
     let xsize = (xsize /. range) *. well_width in
     let xsize, well_width =
       if xsize < 16. then (16., well_width -. (16. -. xsize))
@@ -108,9 +108,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     (xsize, well_width, xstart) in
 
   let draw_controls ctx =
-    let top = v.View.view_height in
+    let top = View.view_height v in
     ctx##fillStyle <- Js.string "#888";
-    ctx##rect (0.0, top, v.View.view_width, control_height);
+    ctx##rect (0.0, top, View.view_width v, control_height);
     ctx##fill ();
     ctx##beginPath ();
     ctx##strokeStyle <- Js.string "#fff";
@@ -119,7 +119,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ctx##moveTo (34.0, top +. control_height /. 2.);
     ctx##lineTo (62.0, top +. control_height /. 2.);
     ctx##moveTo (48.0, top);
-    ctx##lineTo (48.0, v.View.view_height +. control_height);
+    ctx##lineTo (48.0, View.view_height v +. control_height);
     ctx##stroke ();
     ctx##beginPath ();
     (* Scrollbar *)
@@ -158,9 +158,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let button_zoom factor =
     let zoom factor =
       let t_old = View.time_of_x v !last_focal_x in
-      View.set_scale v (v.View.scale *. factor);
+      View.zoom v factor;
       let t_new = View.time_of_x v !last_focal_x in
-      let _hscroll = View.set_start_time v (v.View.view_start_time -. (t_new -. t_old)) in
+      let _hscroll = View.set_start_time v (View.view_start_time v -. (t_new -. t_old)) in
       render () in
 
     let rec timeout _t =
@@ -178,7 +178,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ) else if x < 64. then (
       button_zoom 1.2;
     ) else (
-      let top_thread = Thread.top_thread v.View.vat in
+      let top_thread = Thread.top_thread (View.vat v) in
       let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
       let scroll_to_x x =
         let xsize, well_width, _ = hscroll_values () in
@@ -216,11 +216,11 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     let t_at_pointer = View.time_of_x v x in
 
     if dy < 0 then
-      View.set_scale v (v.View.scale *. 1.2)
+      View.zoom v 1.2
     else
-      View.set_scale v (v.View.scale /. 1.2);
+      View.zoom v (1. /. 1.2);
     let t_new_at_pointer = View.time_of_x v x in
-    let _hscroll = View.set_start_time v (v.View.view_start_time -. (t_new_at_pointer -. t_at_pointer)) in
+    let _hscroll = View.set_start_time v (View.view_start_time v -. (t_new_at_pointer -. t_at_pointer)) in
     render ();
     Js._false in
 
@@ -231,7 +231,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
     let (x, y) = rel_event_coords ev in
-    if y >= v.View.view_height then control_click ~x
+    if y >= View.view_height v then control_click ~x
     else (
       let start_time = View.time_of_x v x in
       let start_y = View.y_of_view_y v y in
@@ -255,8 +255,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let double_click _ev =
-    let t_min = v.View.view_start_time in
-    let t_max = t_min +. View.timespan_of_width v v.View.view_width in
+    let t_min = View.view_start_time v in
+    let t_max = t_min +. View.timespan_of_width v (View.view_width v) in
     Printf.printf "?t_min=%f&t_max=%f\n" t_min t_max;
     Js._false in
 
@@ -275,7 +275,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     begin match touches ev##touches with
     | [t] ->
         let (x, y) = rel_event_coords t in
-        if y >= v.View.view_height then control_click ~x
+        if y >= View.view_height v then control_click ~x
         else (
           last_focal_x := x;
           touch := Touch_drag (

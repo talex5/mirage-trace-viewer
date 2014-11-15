@@ -119,9 +119,9 @@ module Make (C : CANVAS) = struct
     C.set_line_width cr 1.0;
     C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
 
-    let grid_step = v.View.grid_step in
+    let grid_step = View.grid_step v in
     let top = 0.0 in
-    let bottom = v.View.view_height in
+    let bottom = View.view_height v in
 
     let area_start_time = View.time_of_x v area_start_x in
     let grid_start_x = floor (area_start_time /. grid_step) *. grid_step |> View.x_of_time v in
@@ -160,7 +160,7 @@ module Make (C : CANVAS) = struct
 
     if x +. text_width > max_x then (
       (* Doesn't fit. Draw as much as we can. *)
-      C.paint_text cr ~x:min_x ~y ~clip_area:(max_x -. x, v.View.height) msg;
+      C.paint_text cr ~x:min_x ~y ~clip_area:(max_x -. x, View.view_height v) msg;
       max_x
     ) else (
       (* Show label on left margin if the thread starts off-screen *)
@@ -186,7 +186,7 @@ module Make (C : CANVAS) = struct
         draw_labels cr ~v ~y ~min_x ~max_x rest
 
   let render v cr ~expose_area =
-    let vat = v.View.vat in
+    let vat = View.vat v in
     let top_thread = Thread.top_thread vat in
     let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
 
@@ -283,7 +283,7 @@ module Make (C : CANVAS) = struct
 
     (* Arrows that are only just off screen can still be visible, so extend the
      * window slightly. Once we get wider than a screen width, they become invisible anyway. *)
-    let view_timespace = View.timespan_of_width v v.View.view_width in
+    let view_timespace = View.timespan_of_width v (View.view_width v) in
     let vis_arrows_min = visible_t_min -. view_timespace in
     let vis_arrows_max = visible_t_max +. view_timespace in
     thin cr;
@@ -325,7 +325,7 @@ module Make (C : CANVAS) = struct
           match Thread.becomes t with
           | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
           | _ -> end_x in
-        draw_labels cr ~v ~y ~min_x:start_x ~max_x:(min end_x v.View.view_width) (Thread.labels t)
+        draw_labels cr ~v ~y ~min_x:start_x ~max_x:(min end_x (View.view_width v)) (Thread.labels t)
       )
     );
 
@@ -355,12 +355,12 @@ module Make (C : CANVAS) = struct
       counter_line i cr;
       let open Counter in
       let range = counter.max -. counter.min in
-      let v_scale = v.View.view_height /. range in
-      let v_offset = v.View.view_height *. (1. +. counter.min /. range) in
+      let v_scale = View.view_height v /. range in
+      let v_offset = View.view_height v *. (1. +. counter.min /. range) in
       let y_of_value value = v_offset -. v_scale *. value in
 
       let values = counter.values in
-      let i = Sorted_array.count_before (fun (time, _v) -> time >= v.View.view_start_time) values in
+      let i = Sorted_array.count_before (fun (time, _v) -> time >= View.view_start_time v) values in
       let first_visible = max (i - 1) 0 in
       let first_value =
         if i = 0 then 0.0
@@ -373,13 +373,14 @@ module Make (C : CANVAS) = struct
           C.line_to cr ~x ~y:!y;
           let new_y = y_of_value value in
           C.line_to cr ~x ~y:new_y;
-          if x > v.View.view_width then raise Exit;
+          if x > View.view_width v then raise Exit;
           y := new_y;
         )
       with Exit -> () end;
-      C.line_to cr ~x:v.View.view_width ~y:!y;
+      C.line_to cr ~x:(View.view_width v) ~y:!y;
       C.stroke cr;
       let y = insert_label (max 16. (!y -. 2.)) stat_labels in
-      draw_label cr ~v ~y ~min_x:0.0 ~max_x:v.View.view_width v.View.view_width counter.name |> ignore
+      let max_x = View.view_width v in
+      draw_label cr ~v ~y ~min_x:0.0 ~max_x max_x counter.name |> ignore
     );
 end

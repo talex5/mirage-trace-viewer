@@ -147,6 +147,9 @@ let set_scale v scale =
   v.scale <- max min_scale scale;
   v.grid_step <- calc_grid_step scale
 
+let zoom v factor =
+  set_scale v (v.scale *. factor)
+
 let scroll_bounds v =
   let top_thread = Thread.top_thread v.vat in
   let width = width_of_timespan v (Thread.end_time top_thread -. Thread.start_time top_thread) in
@@ -215,3 +218,9 @@ let iter_interactions v t1 t2 f =
     )
 
 let dist_from_focus v t= Thread.y t -. v.v_projection.focal_y
+
+let vat t = t.vat
+let view_start_time t = t.view_start_time
+let view_width t = t.view_width
+let view_height t = t.view_height
+let grid_step t = t.grid_step

@@ -27,8 +27,8 @@ module R = Render.Make(Canvas)
 let export_as_svg v fname =
   let surface = Cairo.SVG.create
     ~fname
-    ~width:(v.View.view_width)
-    ~height:(v.View.view_height) in
+    ~width:(View.view_width v)
+    ~height:(View.view_height v) in
   let cr = Cairo.create surface in
   Cairo.set_font_size cr 12.;
   Cairo.select_font_face cr "Sans";
@@ -37,12 +37,12 @@ let export_as_svg v fname =
   (* Note: bounds are slightly smaller than the page because otherwise Cairo
    * optimises the clip region out (but Inkscape displays things beyond the
    * page boundaries). *)
-  Cairo.rectangle cr ~x:1.0 ~y:0.0 ~w:(v.View.view_width -. 2.0) ~h:v.View.view_height;
+  Cairo.rectangle cr ~x:1.0 ~y:0.0 ~w:(View.view_width v -. 2.0) ~h:(View.view_height v);
   Cairo.clip cr;
 
   R.render v cr ~expose_area:(
     (0.0, 0.0),
-    (v.View.view_width, v.View.view_height)
+    (View.view_width v, View.view_height v)
   );
   Cairo.Surface.finish surface
 
@@ -137,11 +137,11 @@ let make vat =
     let t_at_pointer = View.time_of_x v x in
     let redraw () =
       let t_new_at_pointer = View.time_of_x v x in
-      set_start_time (v.View.view_start_time -. (t_new_at_pointer -. t_at_pointer));
+      set_start_time (View.view_start_time v -. (t_new_at_pointer -. t_at_pointer));
       GtkBase.Widget.queue_draw area#as_widget in
     begin match GdkEvent.Scroll.direction ev with
-    | `UP -> View.set_scale v (v.View.scale *. 1.2); set_scollbars (); redraw ()
-    | `DOWN -> View.set_scale v (v.View.scale /. 1.2); redraw (); set_scollbars ()
+    | `UP -> View.zoom v 1.2; set_scollbars (); redraw ()
+    | `DOWN -> View.zoom v (1. /. 1.2); redraw (); set_scollbars ()
     | _ -> () end;
     true
   );
@@ -176,7 +176,7 @@ let make vat =
   );
 
   hadjustment#connect#value_changed ==> (fun () ->
-    set_start_time (Thread.start_time top_thread +. (hadjustment#value /. v.View.scale));
+    set_start_time (Thread.start_time top_thread +. (View.timespan_of_width v hadjustment#value));
     GtkBase.Widget.queue_draw area#as_widget
   );
 

@@ -12,7 +12,7 @@ let v =
   begin try
     let t_min = arg "t_min" |> float_of_string in
     let t_max = arg "t_max" |> float_of_string in
-    let scale = (v.View.view_width -. View.h_margin *. 2.) /. (t_max -. t_min) in
+    let scale = (View.view_width v -. View.h_margin *. 2.) /. (t_max -. t_min) in
     View.set_scale v scale;
     View.set_start_time v t_min |> ignore
   with Not_found -> () end;
