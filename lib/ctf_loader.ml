@@ -21,6 +21,8 @@ let uuid = "\x05\x88\x3b\x8d\x52\x1a\x48\x7b\xb3\x97\x45\x6a\xb1\x50\x68\x0c"
 
 type packet = {
   mutable packet_counter : int;
+  start_offset : int;
+  end_offset : int;
   packet_data : log_buffer;
 }
 
@@ -47,7 +49,6 @@ let order_packets = function
   packets
   |> List.map (fun p -> {p with packet_counter = (p.packet_counter - base_counter) land 0xffff})
   |> List.sort (fun a b -> compare a.packet_counter b.packet_counter)
-  |> List.map (fun p -> p.packet_data)
 
 let packets data =
   let rec aux packet_start =
@@ -67,11 +68,18 @@ let packets data =
       let header_length = 30 in
       let first_event = packet_start + header_length in
       let packet_data = Array1.sub data first_event (packet_content_size / 8 - header_length) in
-      let item = {packet_counter; packet_data} in
+      let item = {
+        start_offset = packet_start;
+        end_offset = packet_start + packet_content_size / 8;
+        packet_counter;
+        packet_data
+      } in
       (* Printf.printf "Found packet 0x%x at offset %d\n" packet_counter packet_start; *)
       item :: aux (packet_start + packet_size / 8)
     ) in
   order_packets (aux 0)
+
+let packet_data p = p.packet_data
 
 let from_channel ch =
   let fd = Unix.descr_of_in_channel ch in
@@ -80,7 +88,8 @@ let from_channel ch =
 
   let events = ref [] in
 
-  packets stream_data |> List.iter (fun data ->
+  packets stream_data |> List.iter (fun packet ->
+    let data = packet.packet_data in
     let pos = ref 0 in
     let read64 () =
       let v = EndianBigstring.LittleEndian.get_int64 data !pos in
@@ -100,53 +109,60 @@ let from_channel ch =
         | x -> Buffer.add_char b x; aux (i + 1) in
       aux !pos in
 
-    while !pos < Array1.dim data do
-      let time = read64 () in
-      let op =
-        match read8 () with
-        | 0 ->
-            let parent = read_thread () in
-            let child = read_thread () in
-            let thread_type = read8 () in
-            Creates (parent, child, thread_type_of_int thread_type)
-        | 1 ->
-            let reader = read_thread () in
-            let input = read_thread () in
-            Reads (reader, input)
-        | 2 ->
-            let resolver = read_thread () in
-            let thread = read_thread () in
-            Resolves (resolver, thread, None)
-        | 3 ->
-            let resolver = read_thread () in
-            let thread = read_thread () in
-            let ex = read_string () in
-            Resolves (resolver, thread, Some ex)
-        | 4 ->
-            let bind = read_thread () in
-            let thread = read_thread () in
-            Becomes (bind, thread)
-        | 5 ->
-            let thread = read_thread () in
-            let label = read_string () in
-            Label (thread, label)
-        | 6 ->
-            let thread = read_thread () in
-            let amount = read64 () |> Int64.to_int in
-            let counter = read_string () in
-            Increases (thread, counter, amount)
-        | 7 ->
-            let thread = read_thread () in
-            Switch thread
-        | 8 ->
-            let duration = read64 () in
-            Gc (Int64.to_float duration /. 1_000_000_000.)
-        | x -> error "Unknown event op %d" x in
-      let event = {
-        time = Int64.to_float time /. 1_000_000_000.;
-        op;
-      } in
-      events := event :: !events
-    done;
+    try
+      while !pos < Array1.dim data do
+        let time = read64 () in
+        let op =
+          match read8 () with
+          | 0 ->
+              let parent = read_thread () in
+              let child = read_thread () in
+              let thread_type = read8 () in
+              Creates (parent, child, thread_type_of_int thread_type)
+          | 1 ->
+              let reader = read_thread () in
+              let input = read_thread () in
+              Reads (reader, input)
+          | 2 ->
+              let resolver = read_thread () in
+              let thread = read_thread () in
+              Resolves (resolver, thread, None)
+          | 3 ->
+              let resolver = read_thread () in
+              let thread = read_thread () in
+              let ex = read_string () in
+              Resolves (resolver, thread, Some ex)
+          | 4 ->
+              let bind = read_thread () in
+              let thread = read_thread () in
+              Becomes (bind, thread)
+          | 5 ->
+              let thread = read_thread () in
+              let label = read_string () in
+              Label (thread, label)
+          | 6 ->
+              let thread = read_thread () in
+              let amount = read64 () |> Int64.to_int in
+              let counter = read_string () in
+              Increases (thread, counter, amount)
+          | 7 ->
+              let thread = read_thread () in
+              Switch thread
+          | 8 ->
+              let duration = read64 () in
+              Gc (Int64.to_float duration /. 1_000_000_000.)
+          | x -> error "Unknown event op %d" x in
+        let event = {
+          time = Int64.to_float time /. 1_000_000_000.;
+          op;
+        } in
+        events := event :: !events
+      done
+    with ex ->
+      Printf.eprintf "Error at offset 0x%x (in packet 0x%x - 0x%x); skipping rest of packet:\n%s\n%!"
+        (!pos + packet.start_offset)
+        packet.start_offset
+        packet.end_offset
+        (Printexc.to_string ex)
   );
   List.rev !events
