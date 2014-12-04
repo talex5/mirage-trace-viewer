@@ -100,7 +100,7 @@ let rec simplify_binds parent =
         | Some (wake_time, Read, other) ->
             t.show_creation <- false;
             t.start_time <- wake_time;
-            if other = parent then true
+            if other == parent then true
             else (
               relocs := (t, other) :: !relocs;
               false
