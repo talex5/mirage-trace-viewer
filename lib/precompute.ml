@@ -11,18 +11,18 @@ let () =
         let vat, stem =
           if Filename.check_suffix name ".sexp" then (
             let ch = open_in name in
-            let vat = Thread.from_channel ch in
+            let vat = Mtv_thread.from_channel ch in
             close_in ch;
             vat, Filename.chop_suffix name ".sexp"
           ) else if Filename.check_suffix name ".ctf" then (
             let ch = open_in name in
-            let events = Ctf_loader.from_channel ch in
+            let events = Mtv_ctf_loader.from_channel ch in
             close_in ch;
-            Thread.of_events events, Filename.chop_suffix name ".ctf"
+            Mtv_thread.of_events events, Filename.chop_suffix name ".ctf"
           ) else (
             failwith ("Not a .sexp or .ctf file: " ^ name)
           ) in
-        let v = View.make ~vat ~view_width:640. ~view_height:480. in
+        let v = Mtv_view.make ~vat ~view_width:640. ~view_height:480. in
         let ch = open_out (stem ^ ".bin") in
         Marshal.to_channel ch v [];
         close_out ch

@@ -1,7 +1,5 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-let t0 = Unix.gettimeofday ()
-
 module Canvas = struct
   type context = Dom_html.canvasRenderingContext2D Js.t
 
@@ -73,12 +71,12 @@ module Canvas = struct
     context##fillRect (0., 0., float_of_int c##width, float_of_int c##height)
 end
 
-module R = Render.Make(Canvas)
+module R = Mtv_render.Make(Canvas)
 
 type touch =
   | Touch_none
-  | Touch_drag of (Thread.time * float)
-  | Touch_zoom of (Thread.time * Thread.time)
+  | Touch_drag of (Mtv_thread.time * float)
+  | Touch_zoom of (Mtv_thread.time * Mtv_thread.time)
 
 let resize_callbacks = ref []
 let () =
@@ -97,9 +95,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
    * thumb start position. If the thumb would be too small, limit it and adjust
    * the well size to make things fit. *)
   let hscroll_values () =
-    let (xlo, xhi, xsize, xvalue), _y = View.scroll_bounds v in
+    let (xlo, xhi, xsize, xvalue), _y = Mtv_view.scroll_bounds v in
     let range = xhi -. xlo in
-    let well_width = View.view_width v -. 64. in
+    let well_width = Mtv_view.view_width v -. 64. in
     let xsize = (xsize /. range) *. well_width in
     let xsize, well_width =
       if xsize < 16. then (16., well_width -. (16. -. xsize))
@@ -108,9 +106,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     (xsize, well_width, xstart) in
 
   let draw_controls ctx =
-    let top = View.view_height v in
+    let top = Mtv_view.view_height v in
     ctx##fillStyle <- Js.string "#888";
-    ctx##rect (0.0, top, View.view_width v, control_height);
+    ctx##rect (0.0, top, Mtv_view.view_width v, control_height);
     ctx##fill ();
     ctx##beginPath ();
     ctx##strokeStyle <- Js.string "#fff";
@@ -119,7 +117,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ctx##moveTo (34.0, top +. control_height /. 2.);
     ctx##lineTo (62.0, top +. control_height /. 2.);
     ctx##moveTo (48.0, top);
-    ctx##lineTo (48.0, View.view_height v +. control_height);
+    ctx##lineTo (48.0, Mtv_view.view_height v +. control_height);
     ctx##stroke ();
     ctx##beginPath ();
     (* Scrollbar *)
@@ -157,10 +155,10 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let last_focal_x = ref 0.0 in   (* Focus for zoom buttons *)
   let button_zoom factor =
     let zoom factor =
-      let t_old = View.time_of_x v !last_focal_x in
-      View.zoom v factor;
-      let t_new = View.time_of_x v !last_focal_x in
-      let _hscroll = View.set_start_time v (View.view_start_time v -. (t_new -. t_old)) in
+      let t_old = Mtv_view.time_of_x v !last_focal_x in
+      Mtv_view.zoom v factor;
+      let t_new = Mtv_view.time_of_x v !last_focal_x in
+      let _hscroll = Mtv_view.set_start_time v (Mtv_view.view_start_time v -. (t_new -. t_old)) in
       render () in
 
     let rec timeout _t =
@@ -178,13 +176,13 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ) else if x < 64. then (
       button_zoom 1.2;
     ) else (
-      let top_thread = Thread.top_thread (View.vat v) in
-      let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
+      let top_thread = Mtv_thread.top_thread (Mtv_view.vat v) in
+      let time_range = Mtv_thread.end_time top_thread -. Mtv_thread.start_time top_thread in
       let scroll_to_x x =
         let xsize, well_width, _ = hscroll_values () in
         let x = x -. xsize /. 2. in
         let frac = (x -. 64.) /. well_width in
-        View.set_start_time v (Thread.start_time top_thread +. time_range *. frac) |> ignore;
+        Mtv_view.set_start_time v (Mtv_thread.start_time top_thread +. time_range *. frac) |> ignore;
         Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore in
 
       scroll_to_x x;
@@ -207,20 +205,20 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     c##height <- view_height;
     let view_width = float_of_int view_width in
     let view_height = float_of_int view_height in
-    View.set_size v view_width (view_height -. control_height);
+    Mtv_view.set_size v view_width (view_height -. control_height);
     render () in
 
   let zoom (ev:Dom_html.mouseEvent Js.t) ~dx:_ ~dy =
     let (x, _) = rel_event_coords ev in
     last_focal_x := x;
-    let t_at_pointer = View.time_of_x v x in
+    let t_at_pointer = Mtv_view.time_of_x v x in
 
     if dy < 0 then
-      View.zoom v 1.2
+      Mtv_view.zoom v 1.2
     else
-      View.zoom v (1. /. 1.2);
-    let t_new_at_pointer = View.time_of_x v x in
-    let _hscroll = View.set_start_time v (View.view_start_time v -. (t_new_at_pointer -. t_at_pointer)) in
+      Mtv_view.zoom v (1. /. 1.2);
+    let t_new_at_pointer = Mtv_view.time_of_x v x in
+    let _hscroll = Mtv_view.set_start_time v (Mtv_view.view_start_time v -. (t_new_at_pointer -. t_at_pointer)) in
     render ();
     Js._false in
 
@@ -231,20 +229,20 @@ let attach (c:Dom_html.canvasElement Js.t) v =
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
     let (x, y) = rel_event_coords ev in
-    if y >= View.view_height v then control_click ~x
+    if y >= Mtv_view.view_height v then control_click ~x
     else (
-      let start_time = View.time_of_x v x in
-      let start_y = View.y_of_view_y v y in
+      let start_time = Mtv_view.time_of_x v x in
+      let start_y = Mtv_view.y_of_view_y v y in
       last_focal_x := x;
 
       let motion (ev:Dom_html.mouseEvent Js.t) =
         let (x, y) = rel_event_coords ev in
         last_focal_x := x;
-        let time_at_pointer = View.time_of_x v x in
-        let y_at_pointer = View.y_of_view_y v y in
+        let time_at_pointer = Mtv_view.time_of_x v x in
+        let y_at_pointer = Mtv_view.y_of_view_y v y in
         if time_at_pointer <> start_time || y_at_pointer <> start_y then (
-          View.set_start_time v (start_time -. View.timespan_of_width v x) |> ignore;
-          View.set_view_y_so v start_y y |> ignore;
+          Mtv_view.set_start_time v (start_time -. Mtv_view.timespan_of_width v x) |> ignore;
+          Mtv_view.set_view_y_so v start_y y |> ignore;
           Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
         );
         Js._false in
@@ -255,8 +253,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let double_click _ev =
-    let t_min = View.view_start_time v in
-    let t_max = t_min +. View.timespan_of_width v (View.view_width v) in
+    let t_min = Mtv_view.view_start_time v in
+    let t_max = t_min +. Mtv_view.timespan_of_width v (Mtv_view.view_width v) in
     Printf.printf "?t_min=%f&t_max=%f\n" t_min t_max;
     Js._false in
 
@@ -275,12 +273,12 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     begin match touches ev##touches with
     | [t] ->
         let (x, y) = rel_event_coords t in
-        if y >= View.view_height v then control_click ~x
+        if y >= Mtv_view.view_height v then control_click ~x
         else (
           last_focal_x := x;
           touch := Touch_drag (
-            View.time_of_x v x,
-            View.view_y_of_y v y
+            Mtv_view.time_of_x v x,
+            Mtv_view.view_y_of_y v y
           )
         )
     | [t0; t1] ->
@@ -288,8 +286,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
         let (x1, _) = rel_event_coords t1 in
         last_focal_x := x0;
         touch := Touch_zoom (
-          (View.time_of_x v x0),
-          (View.time_of_x v x1)
+          (Mtv_view.time_of_x v x0),
+          (Mtv_view.time_of_x v x1)
         )
     | _ ->
         cancel_mouse_timeouts ();
@@ -301,19 +299,19 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     | Touch_drag (start_time, start_y), [touch] ->
         let x_new, view_y_new = rel_event_coords touch in
         last_focal_x := x_new;
-        let t_new = View.x_of_time v x_new in
-        let y_new = View.y_of_view_y v view_y_new in
+        let t_new = Mtv_view.x_of_time v x_new in
+        let y_new = Mtv_view.y_of_view_y v view_y_new in
         if t_new <> start_time || start_y <> y_new then (
-          View.set_start_time v (start_time -. View.timespan_of_width v x_new) |> ignore;
-          View.set_view_y_so v start_y view_y_new |> ignore;
+          Mtv_view.set_start_time v (start_time -. Mtv_view.timespan_of_width v x_new) |> ignore;
+          Mtv_view.set_view_y_so v start_y view_y_new |> ignore;
           Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
         let (x0, _) = rel_event_coords touch0 in
         let (x1, _) = rel_event_coords touch1 in
         last_focal_x := x0;
-        View.set_start_time v (start_t0 -. View.timespan_of_width v x0) |> ignore;
-        View.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
+        Mtv_view.set_start_time v (start_t0 -. Mtv_view.timespan_of_width v x0) |> ignore;
+        Mtv_view.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
         Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
     | _ -> ()
     end;
@@ -333,4 +331,22 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let resize_false _ = resize (); Js._false in
   Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize_false) (Js.bool true) |> ignore;
   resize_callbacks := resize :: !resize_callbacks;
-  resize ();
+  resize ()
+
+let load ?file ?range name =
+  let file =
+    match file with
+    | Some file -> file
+    | None -> Printf.sprintf "/static/%s.bin" name in
+  let ch = open_in file in
+  let v = Marshal.from_channel ch in
+  close_in ch;
+  begin match range with
+  | None -> ()
+  | Some (t_min, t_max) ->
+      let scale = (Mtv_view.view_width v -. Mtv_view.h_margin *. 2.) /. (t_max -. t_min) in
+      Mtv_view.set_scale v scale;
+      Mtv_view.set_start_time v t_min |> ignore end;
+  match Dom_html.tagged (Dom_html.getElementById name) with
+  | Dom_html.Canvas c -> attach c v
+  | _ -> failwith (Printf.sprintf "Canvas element '%s' not found in DOM" name)

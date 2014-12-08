@@ -10,4 +10,4 @@ val packets : log_buffer -> packet list
 
 val packet_data : packet -> log_buffer
 
-val from_channel : in_channel -> Event.t list
+val from_channel : in_channel -> Mtv_event.t list

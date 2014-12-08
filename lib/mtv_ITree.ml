@@ -45,7 +45,7 @@ module Make(Value : Set.OrderedType) = struct
    * index where [test_start interval] is true until [test_end interval] is false. *)
   let add_range intervals test_start test_end acc =
     let l = Array.length intervals in
-    let first = intervals |> Sorted_array.count_before (fun i2 -> test_start i2) in
+    let first = intervals |> Mtv_sorted_array.count_before (fun i2 -> test_start i2) in
     let rec collect acc i =
       if i = l then acc
       else (

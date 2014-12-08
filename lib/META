@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 867f26a762f83855aba62747336acb2a)
+# DO NOT EDIT (digest: f2a8e2a75794e937f81257eab64d6a66)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
-requires = "itv-tree sexplib sexplib.syntax ocplib-endian.bigstring"
+requires = "itv-tree sexplib sexplib.syntax ocplib-endian.bigstring cmdliner"
 archive(byte) = "mirage-trace-viewer.cma"
 archive(byte, plugin) = "mirage-trace-viewer.cma"
 archive(native) = "mirage-trace-viewer.cmxa"
@@ -12,11 +12,22 @@ package "js" (
  version = "0.1"
  description = "Graphical viewer of Lwt trace logs"
  requires = "mirage-trace-viewer js_of_ocaml js_of_ocaml.syntax"
- archive(byte) = "mirage-trace-viewer.js.cma"
- archive(byte, plugin) = "mirage-trace-viewer.js.cma"
- archive(native) = "mirage-trace-viewer.js.cmxa"
- archive(native, plugin) = "mirage-trace-viewer.js.cmxs"
- exists_if = "mirage-trace-viewer.js.cma"
+ archive(byte) = "js.cma"
+ archive(byte, plugin) = "js.cma"
+ archive(native) = "js.cmxa"
+ archive(native, plugin) = "js.cmxs"
+ exists_if = "js.cma"
+)
+
+package "gtk" (
+ version = "0.1"
+ description = "Graphical viewer of Lwt trace logs"
+ requires = "lablgtk2 cairo2.lablgtk2 cairo2 main"
+ archive(byte) = "mtv-gtk-plugin.cma"
+ archive(byte, plugin) = "mtv-gtk-plugin.cma"
+ archive(native) = "mtv-gtk-plugin.cmxa"
+ archive(native, plugin) = "mtv-gtk-plugin.cmxs"
+ exists_if = "mtv-gtk-plugin.cma"
 )
 # OASIS_STOP
 

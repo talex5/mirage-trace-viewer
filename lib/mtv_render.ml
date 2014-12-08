@@ -74,8 +74,8 @@ module Make (C : CANVAS) = struct
     C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:1.0
 
   let line v cr time src recv =
-    C.move_to cr ~x:(View.x_of_time v time) ~y:(View.y_of_thread v src);
-    C.line_to cr ~x:(View.x_of_time v time) ~y:(View.y_of_thread v recv);
+    C.move_to cr ~x:(Mtv_view.x_of_time v time) ~y:(Mtv_view.y_of_thread v src);
+    C.line_to cr ~x:(Mtv_view.x_of_time v time) ~y:(Mtv_view.y_of_thread v recv);
     C.stroke cr
 
   let draw_arrow_head_v cr ~x ~y ~arrow_head_y =
@@ -95,19 +95,19 @@ module Make (C : CANVAS) = struct
     C.fill cr
 
   let arrow v cr src src_time recv recv_time (r, g, b) =
-    let width = View.width_of_timespan v (recv_time -. src_time) in
+    let width = Mtv_view.width_of_timespan v (recv_time -. src_time) in
     let alpha = 1.0 -. (min 1.0 (width /. 6000.)) in
     if alpha > 0.01 then (
       C.set_source_alpha cr ~r ~g ~b alpha;
 
-      if Thread.id src <> -1  && Thread.id src <> Thread.id recv then (
-        let src_x = View.clip_x_of_time v src_time in
-        let src_y = View.y_of_thread v src in
-        let recv_y = View.y_of_thread v recv in
+      if Mtv_thread.id src <> -1  && Mtv_thread.id src <> Mtv_thread.id recv then (
+        let src_x = Mtv_view.clip_x_of_time v src_time in
+        let src_y = Mtv_view.y_of_thread v src in
+        let recv_y = Mtv_view.y_of_thread v recv in
 
         C.move_to cr ~x:src_x ~y:src_y;
 
-        let x = View.clip_x_of_time v recv_time in
+        let x = Mtv_view.clip_x_of_time v recv_time in
         let d = recv_y -. src_y in
         if d < -.arrow_height then draw_arrow_head_v cr ~x ~y:recv_y ~arrow_head_y:(recv_y +. arrow_height)
         else if d > arrow_height then draw_arrow_head_v cr ~x ~y:recv_y ~arrow_head_y:(recv_y -. arrow_height)
@@ -119,13 +119,13 @@ module Make (C : CANVAS) = struct
     C.set_line_width cr 1.0;
     C.set_source_rgb cr ~r:0.7 ~g:0.7 ~b:0.7;
 
-    let grid_step = View.grid_step v in
+    let grid_step = Mtv_view.grid_step v in
     let top = 0.0 in
-    let bottom = View.view_height v in
+    let bottom = Mtv_view.view_height v in
 
-    let area_start_time = View.time_of_x v area_start_x in
-    let grid_start_x = floor (area_start_time /. grid_step) *. grid_step |> View.x_of_time v in
-    let grid_step_x = View.width_of_timespan v grid_step in
+    let area_start_time = Mtv_view.time_of_x v area_start_x in
+    let grid_start_x = floor (area_start_time /. grid_step) *. grid_step |> Mtv_view.x_of_time v in
+    let grid_step_x = Mtv_view.width_of_timespan v grid_step in
     let rec draw x =
       if x < area_end_x then (
         C.move_to cr ~x:x ~y:top;
@@ -160,7 +160,7 @@ module Make (C : CANVAS) = struct
 
     if x +. text_width > max_x then (
       (* Doesn't fit. Draw as much as we can. *)
-      C.paint_text cr ~x:min_x ~y ~clip_area:(max_x -. x, View.view_height v) msg;
+      C.paint_text cr ~x:min_x ~y ~clip_area:(max_x -. x, Mtv_view.view_height v) msg;
       max_x
     ) else (
       (* Show label on left margin if the thread starts off-screen *)
@@ -174,20 +174,20 @@ module Make (C : CANVAS) = struct
   let rec draw_labels cr ~v ~y ~min_x ~max_x = function
     | [] -> ()
     | [(time, msg)] -> 
-        let x = View.clip_x_of_time v time in
+        let x = Mtv_view.clip_x_of_time v time in
         let _end : float = draw_label cr ~v ~y ~min_x ~max_x x msg in
         draw_mark cr x y;
         ()
     | (t1, msg1) :: (((t2, _msg2) :: _) as rest) ->
-        let x1 = View.clip_x_of_time v t1 in
-        let x2 = View.clip_x_of_time v t2 in
+        let x1 = Mtv_view.clip_x_of_time v t1 in
+        let x2 = Mtv_view.clip_x_of_time v t2 in
         let min_x = draw_label cr ~v ~y ~min_x ~max_x:x2 x1 msg1 in
         draw_mark cr x1 y;
         draw_labels cr ~v ~y ~min_x ~max_x rest
 
   let render v cr ~expose_area =
-    let vat = View.vat v in
-    let top_thread = Thread.top_thread vat in
+    let vat = Mtv_view.vat v in
+    let top_thread = Mtv_thread.top_thread vat in
     let ((expose_min_x, expose_min_y), (expose_max_x, expose_max_y)) = expose_area in
 
     (* Note: switching drawing colours is really slow with HTML canvas, so we try to group by colour. *)
@@ -199,9 +199,9 @@ module Make (C : CANVAS) = struct
 
     (* When the system thread is "active", the system is idle. *)
     C.set_source_rgb cr ~r:0.8 ~g:0.8 ~b:0.8;
-    Thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
-      let start_x = View.clip_x_of_time v start_time in
-      let end_x = View.clip_x_of_time v end_time in
+    Mtv_thread.activations top_thread |> List.iter (fun (start_time, end_time) ->
+      let start_x = Mtv_view.clip_x_of_time v start_time in
+      let end_x = Mtv_view.clip_x_of_time v end_time in
       if end_x >= expose_min_x && start_x < expose_max_x then (
         C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
         C.fill cr;
@@ -210,9 +210,9 @@ module Make (C : CANVAS) = struct
     );
 
     C.set_source_rgb cr ~r:0.7 ~g:0.6 ~b:0.6;
-    Thread.gc_periods vat |> List.iter (fun (start_time, end_time) ->
-      let start_x = View.clip_x_of_time v start_time in
-      let end_x = View.clip_x_of_time v end_time in
+    Mtv_thread.gc_periods vat |> List.iter (fun (start_time, end_time) ->
+      let start_x = Mtv_view.clip_x_of_time v start_time in
+      let end_x = Mtv_view.clip_x_of_time v end_time in
       if end_x >= expose_min_x && start_x < expose_max_x then (
         C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
         C.fill cr;
@@ -229,28 +229,28 @@ module Make (C : CANVAS) = struct
     draw_grid v cr expose_min_x expose_max_x;
 
     (* Draw the thread lines. *)
-    let visible_t_min = View.time_of_x v expose_min_x in
-    let visible_t_max = View.time_of_x v expose_max_x in
-    let visible_threads = View.visible_threads v (visible_t_min, visible_t_max) in
+    let visible_t_min = Mtv_view.time_of_x v expose_min_x in
+    let visible_t_max = Mtv_view.time_of_x v expose_max_x in
+    let visible_threads = Mtv_view.visible_threads v (visible_t_min, visible_t_max) in
     named_thread cr;
-    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
     let t = i.Interval_tree.Interval.value in
-      let start_x = View.clip_x_of_time v (Thread.start_time t) in
-      let end_x = View.clip_x_of_time v (Thread.end_time t) in
-      let y = View.y_of_thread v t in
+      let start_x = Mtv_view.clip_x_of_time v (Mtv_thread.start_time t) in
+      let end_x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
+      let y = Mtv_view.y_of_thread v t in
       C.move_to cr ~x:start_x ~y;
       C.line_to cr ~x:end_x ~y;
       C.stroke cr;
-      Thread.creates t |> List.iter (fun child ->
-        let child_start_time = Thread.start_time child in
-        if Thread.show_creation child then
+      Mtv_thread.creates t |> List.iter (fun child ->
+        let child_start_time = Mtv_thread.start_time child in
+        if Mtv_thread.show_creation child then
           line v cr child_start_time t child
       );
-      begin match Thread.becomes t with
-      | Some child when Thread.y child <> Thread.y t ->
-          line v cr (Thread.end_time t) t child
+      begin match Mtv_thread.becomes t with
+      | Some child when Mtv_thread.y child <> Mtv_thread.y t ->
+          line v cr (Mtv_thread.end_time t) t child
       | _ -> () end;
-      if not (Thread.resolved t) && end_x -. start_x > 4.0 then (
+      if not (Mtv_thread.resolved t) && end_x -. start_x > 4.0 then (
         C.move_to cr ~x:end_x ~y;
         C.line_to cr ~x:(end_x -. 6.) ~y:(y -. 4.);
         C.line_to cr ~x:(end_x -. 6.) ~y:(y +. 4.);
@@ -259,22 +259,22 @@ module Make (C : CANVAS) = struct
     );
 
     activation cr;
-    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      let y = View.y_of_thread v t in
-      Thread.activations t |> List.iter (fun (start_time, end_time) ->
-        C.move_to cr ~x:(max expose_min_x (View.clip_x_of_time v start_time)) ~y;
-        C.line_to cr ~x:(min expose_max_x (View.clip_x_of_time v end_time)) ~y;
+      let y = Mtv_view.y_of_thread v t in
+      Mtv_thread.activations t |> List.iter (fun (start_time, end_time) ->
+        C.move_to cr ~x:(max expose_min_x (Mtv_view.clip_x_of_time v start_time)) ~y;
+        C.line_to cr ~x:(min expose_max_x (Mtv_view.clip_x_of_time v end_time)) ~y;
         C.stroke cr;
       )
     );
 
     failed cr;
-    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      if Thread.failure t <> None then (
-        let y = View.y_of_thread v t in
-        let x = View.clip_x_of_time v (Thread.end_time t) in
+      if Mtv_thread.failure t <> None then (
+        let y = Mtv_view.y_of_thread v t in
+        let x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
         C.move_to cr ~x ~y:(y -. 8.);
         C.line_to cr ~x ~y:(y +. 8.);
         C.stroke cr;
@@ -283,84 +283,84 @@ module Make (C : CANVAS) = struct
 
     (* Arrows that are only just off screen can still be visible, so extend the
      * window slightly. Once we get wider than a screen width, they become invisible anyway. *)
-    let view_timespace = View.timespan_of_width v (View.view_width v) in
+    let view_timespace = Mtv_view.timespan_of_width v (Mtv_view.view_width v) in
     let vis_arrows_min = visible_t_min -. view_timespace in
     let vis_arrows_max = visible_t_max +. view_timespace in
     thin cr;
     let c = (0.0, 0.0, 1.0) in
     begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
-    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+    Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
       match op with
-      | Thread.Read when Thread.failure other = None -> arrow v cr other end_time t start_time c
+      | Mtv_thread.Read when Mtv_thread.failure other = None -> arrow v cr other end_time t start_time c
       | _ -> ()
     );
     let c = (1.0, 0.0, 0.0) in
     begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
-    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+    Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
       match op with
-      | Thread.Read when Thread.failure other <> None -> arrow v cr other end_time t start_time c
+      | Mtv_thread.Read when Mtv_thread.failure other <> None -> arrow v cr other end_time t start_time c
       | _ -> ()
     );
     let c = (0.0, 0.5, 0.0) in
     begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
-    View.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+    Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
       match op with
-      | Thread.Resolve when Thread.id t <> -1 -> arrow v cr t start_time other end_time c
+      | Mtv_thread.Resolve when Mtv_thread.id t <> -1 -> arrow v cr t start_time other end_time c
       | _ -> ()
     );
 
     let text_visible t =
-      let vert_dist = View.dist_from_focus v t in
+      let vert_dist = Mtv_view.dist_from_focus v t in
       vert_dist > -.2000. && vert_dist < 2000. in
 
     thread_label cr;
-    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      let start_x = View.x_of_start v t +. 2. in
-      let end_x = View.x_of_end v t in
+      let start_x = Mtv_view.x_of_start v t +. 2. in
+      let end_x = Mtv_view.x_of_end v t in
       let thread_width = end_x -. start_x in
       if thread_width > 16. && text_visible t then (
-        let y = View.y_of_thread v t -. 3.0 in
+        let y = Mtv_view.y_of_thread v t -. 3.0 in
         let end_x =
-          match Thread.becomes t with
-          | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
+          match Mtv_thread.becomes t with
+          | Some child when Mtv_thread.y child = Mtv_thread.y t -> Mtv_view.x_of_start v child
           | _ -> end_x in
-        draw_labels cr ~v ~y ~min_x:start_x ~max_x:(min end_x (View.view_width v)) (Thread.labels t)
+        draw_labels cr ~v ~y ~min_x:start_x ~max_x:(min end_x (Mtv_view.view_width v)) (Mtv_thread.labels t)
       )
     );
 
     let text_visible t =
-      let vert_dist = View.dist_from_focus v t in
+      let vert_dist = Mtv_view.dist_from_focus v t in
       vert_dist > -.1000. && vert_dist < 1000. in
 
     type_label cr;
-    visible_threads |> Layout.IT.IntervalSet.iter (fun i ->
+    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in
-      let start_x = View.x_of_start v t +. 2. in
-      let end_x = View.x_of_end v t in
+      let start_x = Mtv_view.x_of_start v t +. 2. in
+      let end_x = Mtv_view.x_of_end v t in
       let thread_width = end_x -. start_x in
       if thread_width > 16. && text_visible t then (
-        let y = View.y_of_thread v t +. 10.0 in
+        let y = Mtv_view.y_of_thread v t +. 10.0 in
         let end_x =
-          match Thread.becomes t with
-          | Some child when Thread.y child = Thread.y t -> View.x_of_start v child
+          match Mtv_thread.becomes t with
+          | Some child when Mtv_thread.y child = Mtv_thread.y t -> Mtv_view.x_of_start v child
           | _ -> end_x in
-        draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Thread.thread_type t)
+        draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Mtv_thread.thread_type t)
         |> ignore;
       )
     );
 
     let stat_labels = ref [] in
-    Thread.counters vat |> List.iteri (fun i counter ->
+    Mtv_thread.counters vat |> List.iteri (fun i counter ->
       counter_line i cr;
-      let open Counter in
+      let open Mtv_counter in
       let range = counter.max -. counter.min in
-      let v_scale = View.view_height v /. range in
-      let v_offset = View.view_height v *. (1. +. counter.min /. range) in
+      let v_scale = Mtv_view.view_height v /. range in
+      let v_offset = Mtv_view.view_height v *. (1. +. counter.min /. range) in
       let y_of_value value = v_offset -. v_scale *. value in
 
       let values = counter.values in
-      let i = Sorted_array.count_before (fun (time, _v) -> time >= View.view_start_time v) values in
+      let i = Mtv_sorted_array.count_before (fun (time, _v) -> time >= Mtv_view.view_start_time v) values in
       let first_visible = max (i - 1) 0 in
       let first_value =
         if i = 0 then 0.0
@@ -369,18 +369,18 @@ module Make (C : CANVAS) = struct
       C.move_to cr ~x:0.0 ~y:!y;
       begin try
         values |> Array.iter (fun (time, value) ->
-          let x = View.clip_x_of_time v time in
+          let x = Mtv_view.clip_x_of_time v time in
           C.line_to cr ~x ~y:!y;
           let new_y = y_of_value value in
           C.line_to cr ~x ~y:new_y;
-          if x > View.view_width v then raise Exit;
+          if x > Mtv_view.view_width v then raise Exit;
           y := new_y;
         )
       with Exit -> () end;
-      C.line_to cr ~x:(View.view_width v) ~y:!y;
+      C.line_to cr ~x:(Mtv_view.view_width v) ~y:!y;
       C.stroke cr;
       let y = insert_label (max 16. (!y -. 2.)) stat_labels in
-      let max_x = View.view_width v in
+      let max_x = Mtv_view.view_width v in
       draw_label cr ~v ~y ~min_x:0.0 ~max_x max_x counter.name |> ignore
     );
 end

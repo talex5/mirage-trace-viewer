@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 90d2edd9ab74becde49a13d9134043d7)
+version = "0.1"
+description = "Graphical viewer of Lwt trace logs"
+requires = "mirage-trace-viewer dynlink"
+archive(byte) = "main.cma"
+archive(byte, plugin) = "main.cma"
+archive(native) = "main.cmxa"
+archive(native, plugin) = "main.cmxs"
+exists_if = "main.cma"
+# OASIS_STOP
+

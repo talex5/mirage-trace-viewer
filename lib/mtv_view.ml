@@ -10,7 +10,7 @@ type v_projection = {
 }
 
 type t = {
-  vat : Thread.vat;
+  vat : Mtv_thread.vat;
   mutable scale : float;
   mutable view_width : float;
   mutable view_height : float;
@@ -18,9 +18,9 @@ type t = {
   mutable v_projection : v_projection;
   height : float;
   mutable grid_step : float;
-  layout : Layout.t;
-  arrow_events_by_first : (Thread.t * Thread.time * Thread.interaction * Thread.t * Thread.time) array;
-  arrow_events_by_second : (Thread.t * Thread.time * Thread.interaction * Thread.t * Thread.time) array;
+  layout : Mtv_layout.t;
+  arrow_events_by_first : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
+  arrow_events_by_second : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
 }
 
 let h_margin = 20.
@@ -35,15 +35,15 @@ let by_second_time (_, _, _, _, (t1:float)) (_, _, _, _, (t2:float)) = compare t
 
 let collect_events top =
   let events = ref [] in
-  top |> Thread.iter (fun thread ->
-    let interactions = Thread.interactions thread
+  top |> Mtv_thread.iter (fun thread ->
+    let interactions = Mtv_thread.interactions thread
       |> List.map (fun (time, op, other) ->
         match op with
-        | Thread.Read ->
-            let end_time = min time (Thread.end_time other) in
+        | Mtv_thread.Read ->
+            let end_time = min time (Mtv_thread.end_time other) in
             (thread, time, op, other, end_time)
-        | Thread.Resolve ->
-            let start_time = min time (Thread.end_time thread) in
+        | Mtv_thread.Resolve ->
+            let start_time = min time (Mtv_thread.end_time thread) in
             (thread, start_time, op, other, time)
       ) in
     events := interactions @ !events
@@ -82,16 +82,16 @@ let v_projection_for_focus ~height ~view_height focal_y =
   }
 
 let make ~view_width ~view_height ~vat =
-  let top_thread = Thread.top_thread vat in
-  let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
+  let top_thread = Mtv_thread.top_thread vat in
+  let time_range = Mtv_thread.end_time top_thread -. Mtv_thread.start_time top_thread in
   let scale = (view_width -. h_margin *. 2.) /. time_range in
   let (arrow_events_by_first, arrow_events_by_second) = collect_events top_thread in
-  let layout, height = Layout.arrange top_thread in {
+  let layout, height = Mtv_layout.arrange top_thread in {
     vat;
     scale;
     view_width;
     view_height;
-    view_start_time = Thread.start_time top_thread -. (h_margin /. scale);
+    view_start_time = Mtv_thread.start_time top_thread -. (h_margin /. scale);
     v_projection = v_projection_for_focus ~height ~view_height 0.0;
     height;
     grid_step = calc_grid_step scale;
@@ -103,8 +103,8 @@ let make ~view_width ~view_height ~vat =
 let x_of_time v time = (time -. v.view_start_time)  *. v.scale
 let time_of_x v x = (x /. v.scale) +. v.view_start_time
 
-let x_of_start v t = x_of_time v (Thread.start_time t)
-let x_of_end v t = x_of_time v (Thread.end_time t)
+let x_of_start v t = x_of_time v (Mtv_thread.start_time t)
+let x_of_end v t = x_of_time v (Mtv_thread.end_time t)
 
 let clip_x_of_time v t =
   x_of_time v t
@@ -135,14 +135,14 @@ let y_of_view_y v view_y =
     ~-. (d *. p.v_scale -. focal_y)
   )
 
-let y_of_thread v t = view_y_of_y v (Thread.y t)
+let y_of_thread v t = view_y_of_y v (Mtv_thread.y t)
 
 let width_of_timespan v t = t *. v.scale
 let timespan_of_width v w = w /. v.scale
 
 let set_scale v scale =
-  let top_thread = Thread.top_thread v.vat in
-  let time_range = Thread.end_time top_thread -. Thread.start_time top_thread in
+  let top_thread = Mtv_thread.top_thread v.vat in
+  let time_range = Mtv_thread.end_time top_thread -. Mtv_thread.start_time top_thread in
   let min_scale = (v.view_width -. h_margin *. 2.) /. time_range in
   v.scale <- max min_scale scale;
   v.grid_step <- calc_grid_step scale
@@ -151,20 +151,20 @@ let zoom v factor =
   set_scale v (v.scale *. factor)
 
 let scroll_bounds v =
-  let top_thread = Thread.top_thread v.vat in
-  let width = width_of_timespan v (Thread.end_time top_thread -. Thread.start_time top_thread) in
+  let top_thread = Mtv_thread.top_thread v.vat in
+  let width = width_of_timespan v (Mtv_thread.end_time top_thread -. Mtv_thread.start_time top_thread) in
   (
-    (-. h_margin, width +. h_margin, v.view_width, (v.view_start_time -. Thread.start_time top_thread) *. v.scale),
+    (-. h_margin, width +. h_margin, v.view_width, (v.view_start_time -. Mtv_thread.start_time top_thread) *. v.scale),
     (-. v_margin, v.height +. v_margin +. v.view_height, v.view_height, v.v_projection.focal_y)
   )
 
 let visible_threads v visible_time_range =
-  Layout.IT.overlapping_interval v.layout visible_time_range
+  Mtv_layout.IT.overlapping_interval v.layout visible_time_range
 
 let set_start_time v t =
-  let top_thread = Thread.top_thread v.vat in
-  let trace_start_time = Thread.start_time top_thread in
-  let trace_end_time = Thread.end_time top_thread in
+  let top_thread = Mtv_thread.top_thread v.vat in
+  let trace_start_time = Mtv_thread.start_time top_thread in
+  let trace_end_time = Mtv_thread.end_time top_thread in
   v.view_start_time <- t
     |> min (trace_end_time -. ((v.view_width -. h_margin) /. v.scale))
     |> max (trace_start_time -. (h_margin /. v.scale));
@@ -204,11 +204,11 @@ let set_view_y_so v y view_y =
   v.v_projection.focal_y
 
 let iter_interactions v t1 t2 f =
-  Sorted_array.iter_range v.arrow_events_by_first
+  Mtv_sorted_array.iter_range v.arrow_events_by_first
     (fun (_, t, _, _, _) -> t >= t1)
     (fun (_, t, _, _, _) -> t < t2)
     f;
-  Sorted_array.iter_range v.arrow_events_by_second
+  Mtv_sorted_array.iter_range v.arrow_events_by_second
     (fun (_, _, _, _, t) -> t >= t1)
     (fun (_, _, _, _, t) -> t < t2)
     (fun i ->
@@ -217,7 +217,7 @@ let iter_interactions v t1 t2 f =
       (* else we already processed this one above *)
     )
 
-let dist_from_focus v t= Thread.y t -. v.v_projection.focal_y
+let dist_from_focus v t= Mtv_thread.y t -. v.v_projection.focal_y
 
 let vat t = t.vat
 let view_start_time t = t.view_start_time

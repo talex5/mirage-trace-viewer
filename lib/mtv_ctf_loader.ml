@@ -1,6 +1,6 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-open Event
+open Mtv_event
 open Bigarray
 
 type log_buffer = (char, int8_unsigned_elt, c_layout) Array1.t

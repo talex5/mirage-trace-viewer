@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 6808cf26a9c847092a98dd6b2bc648de) *)
+(* DO NOT EDIT (digest: 79a7750054476e1e73289fa277ffd696) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -610,11 +610,13 @@ let package_default =
      MyOCamlbuildBase.lib_ocaml =
        [
           ("mirage-trace-viewer", ["lib"], []);
-          ("mirage-trace-viewer.js", ["js"], [])
+          ("js", ["js"], []);
+          ("main", ["main"], []);
+          ("mtv-gtk-plugin", ["gtk"], [])
        ];
      lib_c = [];
      flags = [];
-     includes = [("js", ["lib"]); ("gtk", ["lib"]); ("examples", ["js"])]
+     includes = [("main", ["lib"]); ("js", ["lib"]); ("gtk", ["main"])]
   }
   ;;
 
@@ -622,6 +624,45 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 626 "myocamlbuild.ml"
+# 628 "myocamlbuild.ml"
 (* OASIS_STOP *)
-Ocamlbuild_plugin.dispatch dispatch_default;;
+
+type target = {
+  tag : string;
+  ext : string;
+}
+
+let native = { tag = "native"; ext = "cmxa"}
+let byte = { tag = "byte"; ext = "cma"}
+
+let get_dir package =
+  let c_out, c_in, c_err = Unix.open_process_full ("ocamlfind query " ^ package) (Unix.environment ()) in
+  let info =
+    try
+      let dir = input_line c_out |> String.trim in
+      Printf.printf "%s -> %s\n" package dir;
+      Some dir
+    with End_of_file -> None in
+  match Unix.close_process_full (c_out, c_in, c_err) with
+  | Unix.WEXITED 0 -> info
+  | _ -> None
+
+let my_dispatch conf =
+  dispatch_default conf;
+  match conf with
+  | After_rules ->
+      begin match get_dir "lablgtk2", get_dir "cairo2" with
+      | Some gtk_dir, Some cairo_dir ->
+          let add_link_gtk target =
+            flag ["library"; target.tag; "link_gtk"] (S [
+              A"-cclib"; A ("-L" ^ gtk_dir); A (gtk_dir / "lablgtk." ^ target.ext);
+              A"-cclib"; A ("-L" ^ cairo_dir); A (cairo_dir / "cairo2." ^ target.ext);
+                                               A (cairo_dir / "cairo_gtk." ^ target.ext);
+            ]) in
+          add_link_gtk native;
+          add_link_gtk byte;
+      | _ -> print_endline "(not linking lablgtk/cairo)"
+      end
+  | _ -> ()
+;;
+Ocamlbuild_plugin.dispatch my_dispatch;;

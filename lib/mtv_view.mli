@@ -9,16 +9,16 @@ type t
 val h_margin : float
 val v_margin : float
 
-val x_of_time : t -> Thread.time -> float
-val time_of_x : t -> float -> Thread.time
-val clip_x_of_time : t -> Thread.time -> float
-val width_of_timespan : t -> Thread.time -> float
-val timespan_of_width : t -> float -> Thread.time
+val x_of_time : t -> Mtv_thread.time -> float
+val time_of_x : t -> float -> Mtv_thread.time
+val clip_x_of_time : t -> Mtv_thread.time -> float
+val width_of_timespan : t -> Mtv_thread.time -> float
+val timespan_of_width : t -> float -> Mtv_thread.time
 
-val x_of_start : t -> Thread.t -> float
-val x_of_end : t -> Thread.t -> float
+val x_of_start : t -> Mtv_thread.t -> float
+val x_of_end : t -> Mtv_thread.t -> float
 
-val y_of_thread : t -> Thread.t -> float
+val y_of_thread : t -> Mtv_thread.t -> float
 
 (** Convert a y-position in screen units to thread units (undoing the effect of the projection). *)
 val y_of_view_y : t -> float -> float
@@ -28,13 +28,13 @@ val view_y_of_y : t -> float -> float
 
 (** Distance between the focal y and this thread in thread coordinates.
  * This is used to decide whether it's worth rendering text on this thread. *)
-val dist_from_focus : t -> Thread.t -> float
+val dist_from_focus : t -> Mtv_thread.t -> float
 
-val visible_threads : t -> (float * float) -> Layout.IT.IntervalSet.t
+val visible_threads : t -> (float * float) -> Mtv_layout.IT.IntervalSet.t
 
-val iter_interactions : t -> float -> float -> (Thread.t * Thread.time * Thread.interaction * Thread.t * Thread.time -> unit) -> unit
+val iter_interactions : t -> float -> float -> (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time -> unit) -> unit
 
-val make : view_width:float -> view_height:float -> vat:Thread.vat -> t
+val make : view_width:float -> view_height:float -> vat:Mtv_thread.vat -> t
 
 (** Returns [min, max, size, value] for each scrollbar. *)
 val scroll_bounds : t -> (float * float * float * float) * (float * float * float * float)
@@ -43,7 +43,7 @@ val set_size : t -> float -> float -> unit
 
 (** Set [view_start_time], within the allowed limits.
  * Returns the new horizontol scrollbar position. *)
-val set_start_time : t -> Thread.time -> float
+val set_start_time : t -> Mtv_thread.time -> float
 
 (** Set the focal y. Returns the input value clamped to the acceptable range. *)
 val set_view_y : t -> float -> float
@@ -61,10 +61,10 @@ val set_view_y_so : t -> float -> float -> float
 (** Timespan between grid lines. *)
 val grid_step : t -> float
 
-val vat : t -> Thread.vat
+val vat : t -> Mtv_thread.vat
 
 (** The time corresponding to the left edge of the visible area. *)
-val view_start_time :  t -> Thread.time
+val view_start_time :  t -> Mtv_thread.time
 
 (** The width of the viewport, in screen units. *)
 val view_width : t -> float

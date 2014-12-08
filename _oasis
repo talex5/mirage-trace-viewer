@@ -18,16 +18,15 @@ Flag javascript
   Description:        true to build the JavaScript viewer
   Default:            true
  
-if flag(javascript)
-  PostBuildCommand: ./precompute.native examples/log-x86.sexp && js_of_ocaml --opt=3 +weak.js example_html.byte -I examples --file log-x86.bin -o examples/example_html.js
-
 Library "mirage-trace-viewer"
   Path:       lib
+  FindlibName: mirage-trace-viewer
   BuildTools: ocamlbuild
-  Modules:    ITree, Render, Counter, Event, Layout, Sorted_array, Thread, View
-  BuildDepends: itv-tree,sexplib,sexplib.syntax,ocplib-endian.bigstring
+  Modules:    Mtv_render, Mtv_event, Mtv_layout, Mtv_thread, Mtv_view
+  InternalModules: Mtv_ITree, Mtv_counter, Mtv_sorted_array
+  BuildDepends: itv-tree,sexplib,sexplib.syntax,ocplib-endian.bigstring,cmdliner
   
-Library "mirage-trace-viewer.js"
+Library "js"
   Path:       js
   Build$:     flag(javascript)
   BuildTools: ocamlbuild
@@ -36,22 +35,31 @@ Library "mirage-trace-viewer.js"
   Modules:    Html_viewer
   BuildDepends: mirage-trace-viewer,js_of_ocaml,js_of_ocaml.syntax
   
-Executable "mirage-trace-viewer"
-  Path:       gtk
-  Build$:     flag(gtk)
+Library "main"
+  Path:       main
+  Install:    false
   BuildTools: ocamlbuild
-  MainIs:     gtk_viewer.ml
-  BuildDepends: lablgtk2,cairo2.lablgtk2,cairo2,mirage-trace-viewer
-  CompiledObject: best
-  
-Executable "mirage-trace-viewer-precompute"
-  Path:       lib
-  Build$:     flag(javascript)
-  BuildTools: ocamlbuild
-  MainIs:     precompute.ml
-  BuildDepends: mirage-trace-viewer
+  BuildDepends: mirage-trace-viewer,dynlink
+  Modules:	Plugin
   CompiledObject: best
 
+Library "mtv-gtk-plugin"
+  Path:       gtk
+  FindlibParent: mirage-trace-viewer
+  FindlibName: gtk
+  Build$:     flag(gtk)
+  BuildTools: ocamlbuild
+  BuildDepends: lablgtk2,cairo2.lablgtk2,cairo2,main
+  Modules:	Gtk_viewer
+  CompiledObject: best
+
+Executable "mirage-trace-viewer"
+  Path:	      main
+  BuildTools: ocamlbuild
+  MainIs:     main.ml
+  BuildDepends: main
+  CompiledObject: best
+  
 Executable "mirage-trace-collect"
   Build$:     flag(collect)
   Path:       collect
@@ -59,11 +67,3 @@ Executable "mirage-trace-collect"
   MainIs:     collect.ml
   BuildDepends: xen-gnt, xen-gnt.unix, xenstore.client, xenstore.unix, xenstore_transport.unix, threads, str
   CompiledObject: best
-
-Executable "example_html"
-  Path:	      examples
-  Build$:     flag(javascript)
-  BuildTools: ocamlbuild
-  MainIs:     example_html.ml
-  BuildDepends: mirage-trace-viewer.js
-  CompiledObject: byte

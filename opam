@@ -1,0 +1,30 @@
+opam-version: "1.2"
+name: "mirage-trace-viewer"
+version: "0.1"
+maintainer: "Thomas Leonard <talex5@gmail.com>"
+authors: "Thomas Leonard <talex5@gmail.com>"
+homepage: "https://github.com/talex5/mirage-trace-viewer"
+bug-reports: "https://github.com/talex5/mirage-trace-viewer"
+license: "BSD-2-Clause"
+build: [
+  ["./configure" "--prefix=%{prefix}%"
+    "--disable-collect"
+    "--enable-gtk"
+    "--enable-javascript"
+  ]
+  [make]
+]
+install: [make "install"]
+remove: ["ocamlfind" "remove" "mirage-trace-viewer"]
+depends: [
+  "ocamlfind" {build}
+  "itv-tree"
+  "sexplib"
+  "ocplib-endian"
+  "cmdliner"
+  "js_of_ocaml"
+  "xen-gnt"
+  "xenstore_transport"
+  "lablgtk"
+  "cairo2"
+]

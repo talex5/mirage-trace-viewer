@@ -44,7 +44,7 @@ val resolved : t -> bool
 (** Parse a trace file, returning the root thread. *)
 val from_channel : ?simplify:bool -> in_channel -> vat
 val of_sexp : ?simplify:bool -> Sexplib.Sexp.t list -> vat
-val of_events : ?simplify:bool -> Event.t list -> vat
+val of_events : ?simplify:bool -> Mtv_event.t list -> vat
 
 val set_y : t -> float -> unit
 val y : t -> float
@@ -56,4 +56,4 @@ val id : t -> int
 
 val iter : (t -> unit) -> t -> unit
 
-val counters : vat -> Counter.t list
+val counters : vat -> Mtv_counter.t list

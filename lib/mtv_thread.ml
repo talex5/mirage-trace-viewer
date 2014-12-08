@@ -27,7 +27,7 @@ type mutable_counter = {
 type vat = {
   top_thread : t;
   mutable gc : (time * time) list;
-  mutable counters : Counter.t list;
+  mutable counters : Mtv_counter.t list;
 }
 
 (* For threads with no end. Call before we reverse the lists. *)
@@ -116,7 +116,7 @@ let of_events ?(simplify=true) events =
   let trace_start_time =
     match events with
     | [] -> failwith "No events!"
-    | hd :: _ -> Event.(hd.time) in
+    | hd :: _ -> Mtv_event.(hd.time) in
   let top_thread = make_thread ~start_time:0.0 ~tid:(-1) ~thread_type:"preexisting" in
   top_thread.end_time <- 0.0;
 
@@ -160,7 +160,7 @@ let of_events ?(simplify=true) events =
         | None -> running_thread := None in
 
   events |> List.iter (fun ev ->
-    let open Event in
+    let open Mtv_event in
     let time = ev.time -. trace_start_time in
     if time > top_thread.end_time then top_thread.end_time <- time;
 
@@ -233,7 +233,7 @@ let of_events ?(simplify=true) events =
       low := min !low v;
       high := max !high v;
     );
-    let counter = { Counter.
+    let counter = { Mtv_counter.
       name;
       values;
       min = !low;
@@ -247,7 +247,7 @@ let of_events ?(simplify=true) events =
   vat
 
 let of_sexp ?simplify events =
-  of_events ?simplify (List.map Event.t_of_sexp events)
+  of_events ?simplify (List.map Mtv_event.t_of_sexp events)
 
 let top_thread v = v.top_thread
 let gc_periods v = v.gc
