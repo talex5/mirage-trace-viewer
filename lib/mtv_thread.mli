@@ -42,8 +42,6 @@ val activations : t -> (time * time) list
 val resolved : t -> bool
 
 (** Parse a trace file, returning the root thread. *)
-val from_channel : ?simplify:bool -> in_channel -> vat
-val of_sexp : ?simplify:bool -> Sexplib.Sexp.t list -> vat
 val of_events : ?simplify:bool -> Mtv_event.t list -> vat
 
 val set_y : t -> float -> unit

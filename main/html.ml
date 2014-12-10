@@ -80,7 +80,7 @@ let write_to dir sources =
     let loads = ref [] in
     let bin_args = sources
       |> List.map (fun source ->
-        let vat = source.Plugin.load () in
+        let vat = Plugin.load source |> Mtv_thread.of_events in
         let name = Filename.basename source.Plugin.name in
         let v = Mtv_view.make ~vat ~view_width:640. ~view_height:480. in
         let bin_file = name ^ ".bin" in

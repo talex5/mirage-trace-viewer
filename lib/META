@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: f2a8e2a75794e937f81257eab64d6a66)
+# DO NOT EDIT (digest: 22b4c30f67a32ecad7ee7f7f352b52c3)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
-requires = "itv-tree sexplib sexplib.syntax ocplib-endian.bigstring cmdliner"
+requires = "itv-tree ocplib-endian.bigstring cmdliner"
 archive(byte) = "mirage-trace-viewer.cma"
 archive(byte, plugin) = "mirage-trace-viewer.cma"
 archive(native) = "mirage-trace-viewer.cmxa"

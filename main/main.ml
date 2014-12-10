@@ -2,6 +2,11 @@
 
 open Cmdliner
 
+let ( >>= ) x fn =
+  match x with
+  | `Error _ as e -> e
+  | `Ok x -> fn x
+
 let output_method =
   let docs = "OUTPUT METHODS" in
   let flags =
@@ -14,7 +19,7 @@ let output_method =
     Arg.(value @@ opt (some string) None @@ info ~docs ~doc ~docv:"DIR" ["html"]) in
   let write =
     let doc = "Write out a CTF-format trace file. " in
-    Arg.(value @@ opt (some string) None @@ info ~docs ~doc ~docv:"FILE" ["write"]) in
+    Arg.(value @@ opt (some string) None @@ info ~docs ~doc ~docv:"FILE" ["w"; "write"]) in
 
   let choose_output f h w =
     match f, h, w with
@@ -26,16 +31,14 @@ let output_method =
   Term.(ret (pure choose_output $ flags $ html_output $ write))
 
 let parse_trace_filename trace_file =
-  match fst Arg.non_dir_file trace_file with
-  | `Error _ as e -> e
-  | `Ok trace_file ->
+  fst Arg.non_dir_file trace_file >>= fun trace_file ->
   let load () =
-    let ch = open_in trace_file in
-    let trace =
-      if Filename.check_suffix trace_file ".sexp" then Mtv_thread.from_channel ch
-      else Mtv_thread.of_events (Mtv_ctf_loader.from_channel ch) in
-    close_in ch;
-    trace in
+    let open Bigarray in
+    let fd = Unix.(openfile trace_file [O_RDONLY] 0) in
+    let size = Unix.((fstat fd).st_size) in
+    let ba = Array1.map_file fd char c_layout false size in
+    Unix.close fd;
+    ba in
   `Ok {Plugin.load; name = trace_file}
 
 let format_source fmt src = Format.pp_print_string fmt src.Plugin.name
@@ -47,18 +50,40 @@ let trace_files =
   Arg.(value @@ pos_all input_file [] @@ info ~doc ~docv:"TRACE-FILE" [])
 
 let view_with_gtk source =
-  match Plugin.load_output_plugin "mtv-gtk-plugin.cma" with
+  match Plugin.load_output_plugin "gtk/mtv-gtk-plugin.cma" with
   | `Ok gtk -> gtk source; `Ok ()
   | `Error msg -> `Error (false, msg)
 
+let save_as path sources =
+  match sources with
+  | [source] ->
+      let open Bigarray in
+      let src = source.Plugin.load () in
+      let fd = Unix.(openfile path [O_RDWR; O_CREAT; O_TRUNC; O_CLOEXEC] 0o644) in
+      let size = Array1.dim src in
+      Unix.ftruncate fd size;
+      let dst = Array1.map_file fd char c_layout true size in
+      Array1.blit src dst;
+      Unix.close fd;
+      `Ok ()
+  | _ -> `Error (true, "Save only works with a single input source")
+
 let view sources = function
   | `Gtk -> view_with_gtk sources
-  | `Write _ | `Web -> `Error (false, "Not implemented")  (* TODO *)
+  | `Write path -> save_as path sources
+  | `Web -> `Error (false, "Not implemented")  (* TODO *)
   | `Html dir -> Html.write_to dir sources
   | `Default -> view_with_gtk sources  (* TODO *)
 
-let parse_domain_id _domid =
-  `Error "TODO"
+let parse_domain_id domid =
+  Plugin.load_gnttab_plugin "xen/mtv-xen-plugin.cma" >>= fun (module G : Plugin.GNTTAB) ->
+  Xen_trace_source.connect domid >>= fun source ->
+  let load () =
+    let open Bigarray in
+    let ba = Array1.create char c_layout (Xen_trace_source.size source) in
+    Xen_trace_source.load (module G) source ba;
+    ba in
+  `Ok { Plugin.load; name = domid }
 
 let xen_domain_id : (_ Arg.converter) = (parse_domain_id, format_source)
 

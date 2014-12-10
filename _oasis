@@ -6,8 +6,8 @@ Authors:     Thomas Leonard
 License:     BSD-2-clause
 Plugins:     META (0.4), DevFiles (0.4)
 
-Flag collect
-  Description:        true to build mirage-trace-collect tool (requires xen-gnt.unix)
+Flag xen
+  Description:        true to build support for tracing Xen guests (requires xen-gnt.unix)
   Default:            false
 
 Flag gtk
@@ -24,7 +24,7 @@ Library "mirage-trace-viewer"
   BuildTools: ocamlbuild
   Modules:    Mtv_render, Mtv_event, Mtv_layout, Mtv_thread, Mtv_view
   InternalModules: Mtv_ITree, Mtv_counter, Mtv_sorted_array
-  BuildDepends: itv-tree,sexplib,sexplib.syntax,ocplib-endian.bigstring,cmdliner
+  BuildDepends: itv-tree,ocplib-endian.bigstring,cmdliner
   
 Library "js"
   Path:       js
@@ -39,7 +39,7 @@ Library "main"
   Path:       main
   Install:    false
   BuildTools: ocamlbuild
-  BuildDepends: mirage-trace-viewer,dynlink
+  BuildDepends: mirage-trace-viewer,dynlink,xenstore.client,xenstore.unix,xenstore_transport.unix,threads,str,mirage-profile
   Modules:	Plugin
   CompiledObject: best
 
@@ -60,10 +60,11 @@ Executable "mirage-trace-viewer"
   BuildDepends: main
   CompiledObject: best
   
-Executable "mirage-trace-collect"
-  Build$:     flag(collect)
-  Path:       collect
+Library "mtv-xen-plugin"
+  Build$:     flag(xen)
+  Install:    false
+  Path:       xen
   BuildTools: ocamlbuild
-  MainIs:     collect.ml
-  BuildDepends: xen-gnt, xen-gnt.unix, xenstore.client, xenstore.unix, xenstore_transport.unix, threads, str
+  Modules:    Xen_plugin
+  BuildDepends: xen-gnt,xen-gnt.unix, main
   CompiledObject: best

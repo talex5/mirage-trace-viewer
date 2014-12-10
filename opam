@@ -19,7 +19,6 @@ remove: ["ocamlfind" "remove" "mirage-trace-viewer"]
 depends: [
   "ocamlfind" {build}
   "itv-tree"
-  "sexplib"
   "ocplib-endian"
   "cmdliner"
   "js_of_ocaml"
@@ -27,4 +26,5 @@ depends: [
   "xenstore_transport"
   "lablgtk"
   "cairo2"
+  "mirage-profile"
 ]

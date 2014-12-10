@@ -81,11 +81,7 @@ let packets data =
 
 let packet_data p = p.packet_data
 
-let from_channel ch =
-  let fd = Unix.descr_of_in_channel ch in
-  let size = Unix.((fstat fd).st_size) in
-  let stream_data = Array1.map_file fd char c_layout false size in
-
+let from_bigarray stream_data =
   let events = ref [] in
 
   packets stream_data |> List.iter (fun packet ->
@@ -166,3 +162,9 @@ let from_channel ch =
         (Printexc.to_string ex)
   );
   List.rev !events
+
+let from_channel ch =
+  let fd = Unix.descr_of_in_channel ch in
+  let size = Unix.((fstat fd).st_size) in
+  Array1.map_file fd char c_layout false size
+  |> from_bigarray

@@ -71,7 +71,7 @@ let show_menu ~parent ~v bev =
   menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
 
 let make source =
-  let vat = source.Plugin.load () in
+  let vat = Plugin.load source |> Mtv_thread.of_events in
   let top_thread = Mtv_thread.top_thread vat in
   GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in

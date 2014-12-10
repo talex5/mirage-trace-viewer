@@ -1,8 +1,6 @@
-open Sexplib.Std
-
 let printf = Printf.printf
 
-type thread = int with sexp
+type thread = int
 
 type op = 
   | Creates of thread * thread * string
@@ -13,11 +11,10 @@ type op =
   | Switch of thread
   | Gc of float
   | Increases of thread * string * int
-  with sexp
 
 type t = {
   time : float;
   op : op;
-} with sexp
+}
 
 let fmt ch tid = Printf.fprintf ch "%d" (tid : thread :> int)

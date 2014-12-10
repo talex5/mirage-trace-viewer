@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 79a7750054476e1e73289fa277ffd696) *)
+(* DO NOT EDIT (digest: ad513ff0a3a5737d3fc99061efd31a02) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -612,11 +612,18 @@ let package_default =
           ("mirage-trace-viewer", ["lib"], []);
           ("js", ["js"], []);
           ("main", ["main"], []);
-          ("mtv-gtk-plugin", ["gtk"], [])
+          ("mtv-gtk-plugin", ["gtk"], []);
+          ("mtv-xen-plugin", ["xen"], [])
        ];
      lib_c = [];
      flags = [];
-     includes = [("main", ["lib"]); ("js", ["lib"]); ("gtk", ["main"])]
+     includes =
+       [
+          ("xen", ["main"]);
+          ("main", ["lib"]);
+          ("js", ["lib"]);
+          ("gtk", ["main"])
+       ]
   }
   ;;
 
@@ -624,7 +631,7 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 628 "myocamlbuild.ml"
+# 635 "myocamlbuild.ml"
 (* OASIS_STOP *)
 
 type target = {
@@ -647,6 +654,10 @@ let get_dir package =
   | Unix.WEXITED 0 -> info
   | _ -> None
 
+let links ~target dir names =
+  let archives = names |> List.map (fun name -> A (dir / name ^ "." ^ target.ext)) in
+  S (A"-cclib" :: A ("-L" ^ dir) :: archives)
+
 let my_dispatch conf =
   dispatch_default conf;
   match conf with
@@ -655,14 +666,24 @@ let my_dispatch conf =
       | Some gtk_dir, Some cairo_dir ->
           let add_link_gtk target =
             flag ["library"; target.tag; "link_gtk"] (S [
-              A"-cclib"; A ("-L" ^ gtk_dir); A (gtk_dir / "lablgtk." ^ target.ext);
-              A"-cclib"; A ("-L" ^ cairo_dir); A (cairo_dir / "cairo2." ^ target.ext);
-                                               A (cairo_dir / "cairo_gtk." ^ target.ext);
+              links ~target gtk_dir ["lablgtk"];
+              links ~target cairo_dir ["cairo2"; "cairo_gtk"];
             ]) in
           add_link_gtk native;
           add_link_gtk byte;
       | _ -> print_endline "(not linking lablgtk/cairo)"
-      end
+      end;
+      begin match get_dir "xen-gnt.unix", get_dir "io-page" with
+      | Some gnt_dir, Some io_dir ->
+          let add_link_gnt target =
+            flag ["library"; target.tag; "link_gnt"] (S [
+              links ~target io_dir ["io_page"; "io_page_unix"];
+              links ~target gnt_dir ["xen_gnt"; "xen_gnt_unix"];
+            ]) in
+          add_link_gnt native;
+          add_link_gnt byte;
+      | _ -> print_endline "(not linking xen-gnt.unix)"
+      end;
   | _ -> ()
 ;;
 Ocamlbuild_plugin.dispatch my_dispatch;;

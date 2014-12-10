@@ -246,9 +246,6 @@ let of_events ?(simplify=true) events =
   top_thread.creates <- List.sort by_thread_id top_thread.creates;
   vat
 
-let of_sexp ?simplify events =
-  of_events ?simplify (List.map Mtv_event.t_of_sexp events)
-
 let top_thread v = v.top_thread
 let gc_periods v = v.gc
 
@@ -273,11 +270,5 @@ let compare a b =
   match compare a.y b.y with
   | 0 -> compare a.tid b.tid
   | r -> r
-
-let from_channel ?simplify ch =
-  try
-    Sexplib.Sexp.input_sexps ch |> of_sexp ?simplify
-  with Sexplib.Pre_sexp.Of_sexp_error (ex, t) ->
-    failwith (Printf.sprintf "Error parsing '%s': %s" (Sexplib.Std.string_of_sexp t) (Printexc.to_string ex))
 
 let counters vat = vat.counters

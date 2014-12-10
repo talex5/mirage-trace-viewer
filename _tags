@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: c7c571bd10850625c08d30fe1cca425d)
+# DO NOT EDIT (digest: 4b73126f0ccfafeb1624a594bddf2a2e)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -19,8 +19,6 @@ true: annot, bin_annot
 <lib/*.ml{,i,y}>: pkg_cmdliner
 <lib/*.ml{,i,y}>: pkg_itv-tree
 <lib/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
-<lib/*.ml{,i,y}>: pkg_sexplib
-<lib/*.ml{,i,y}>: pkg_sexplib.syntax
 # Library js
 "js/js.cmxs": use_js
 <js/*.ml{,i,y}>: pkg_cmdliner
@@ -28,8 +26,6 @@ true: annot, bin_annot
 <js/*.ml{,i,y}>: pkg_js_of_ocaml
 <js/*.ml{,i,y}>: pkg_js_of_ocaml.syntax
 <js/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
-<js/*.ml{,i,y}>: pkg_sexplib
-<js/*.ml{,i,y}>: pkg_sexplib.syntax
 <js/*.ml{,i,y}>: use_mirage-trace-viewer
 # Library main
 "main/main.cmxs": use_main
@@ -41,48 +37,61 @@ true: annot, bin_annot
 <gtk/*.ml{,i,y}>: pkg_dynlink
 <gtk/*.ml{,i,y}>: pkg_itv-tree
 <gtk/*.ml{,i,y}>: pkg_lablgtk2
+<gtk/*.ml{,i,y}>: pkg_mirage-profile
 <gtk/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
-<gtk/*.ml{,i,y}>: pkg_sexplib
-<gtk/*.ml{,i,y}>: pkg_sexplib.syntax
+<gtk/*.ml{,i,y}>: pkg_str
+<gtk/*.ml{,i,y}>: pkg_threads
+<gtk/*.ml{,i,y}>: pkg_xenstore.client
+<gtk/*.ml{,i,y}>: pkg_xenstore.unix
+<gtk/*.ml{,i,y}>: pkg_xenstore_transport.unix
 <gtk/*.ml{,i,y}>: use_main
 <gtk/*.ml{,i,y}>: use_mirage-trace-viewer
 # Executable mirage-trace-viewer
 <main/main.{native,byte}>: pkg_cmdliner
 <main/main.{native,byte}>: pkg_dynlink
 <main/main.{native,byte}>: pkg_itv-tree
+<main/main.{native,byte}>: pkg_mirage-profile
 <main/main.{native,byte}>: pkg_ocplib-endian.bigstring
-<main/main.{native,byte}>: pkg_sexplib
-<main/main.{native,byte}>: pkg_sexplib.syntax
+<main/main.{native,byte}>: pkg_str
+<main/main.{native,byte}>: pkg_threads
+<main/main.{native,byte}>: pkg_xenstore.client
+<main/main.{native,byte}>: pkg_xenstore.unix
+<main/main.{native,byte}>: pkg_xenstore_transport.unix
 <main/main.{native,byte}>: use_main
 <main/main.{native,byte}>: use_mirage-trace-viewer
 <main/*.ml{,i,y}>: pkg_cmdliner
 <main/*.ml{,i,y}>: pkg_dynlink
 <main/*.ml{,i,y}>: pkg_itv-tree
+<main/*.ml{,i,y}>: pkg_mirage-profile
 <main/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
-<main/*.ml{,i,y}>: pkg_sexplib
-<main/*.ml{,i,y}>: pkg_sexplib.syntax
+<main/*.ml{,i,y}>: pkg_str
+<main/*.ml{,i,y}>: pkg_threads
+<main/*.ml{,i,y}>: pkg_xenstore.client
+<main/*.ml{,i,y}>: pkg_xenstore.unix
+<main/*.ml{,i,y}>: pkg_xenstore_transport.unix
 <main/*.ml{,i,y}>: use_main
 <main/*.ml{,i,y}>: use_mirage-trace-viewer
-# Executable mirage-trace-collect
-<collect/collect.{native,byte}>: pkg_str
-<collect/collect.{native,byte}>: pkg_threads
-<collect/collect.{native,byte}>: pkg_xen-gnt
-<collect/collect.{native,byte}>: pkg_xen-gnt.unix
-<collect/collect.{native,byte}>: pkg_xenstore.client
-<collect/collect.{native,byte}>: pkg_xenstore.unix
-<collect/collect.{native,byte}>: pkg_xenstore_transport.unix
-<collect/*.ml{,i,y}>: pkg_str
-<collect/*.ml{,i,y}>: pkg_threads
-<collect/*.ml{,i,y}>: pkg_xen-gnt
-<collect/*.ml{,i,y}>: pkg_xen-gnt.unix
-<collect/*.ml{,i,y}>: pkg_xenstore.client
-<collect/*.ml{,i,y}>: pkg_xenstore.unix
-<collect/*.ml{,i,y}>: pkg_xenstore_transport.unix
+# Library mtv-xen-plugin
+"xen/mtv-xen-plugin.cmxs": use_mtv-xen-plugin
+<xen/*.ml{,i,y}>: pkg_cmdliner
+<xen/*.ml{,i,y}>: pkg_dynlink
+<xen/*.ml{,i,y}>: pkg_itv-tree
+<xen/*.ml{,i,y}>: pkg_mirage-profile
+<xen/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
+<xen/*.ml{,i,y}>: pkg_str
+<xen/*.ml{,i,y}>: pkg_threads
+<xen/*.ml{,i,y}>: pkg_xen-gnt
+<xen/*.ml{,i,y}>: pkg_xen-gnt.unix
+<xen/*.ml{,i,y}>: pkg_xenstore.client
+<xen/*.ml{,i,y}>: pkg_xenstore.unix
+<xen/*.ml{,i,y}>: pkg_xenstore_transport.unix
+<xen/*.ml{,i,y}>: use_main
+<xen/*.ml{,i,y}>: use_mirage-trace-viewer
 # OASIS_STOP
 
 true: warn(A-4), strict_sequence
-<lib/event.*>: syntax_camlp4o, pkg_sexplib.syntax
 #<html_viewer.*> or <example_html.*>: package(js_of_ocaml,js_of_ocaml.syntax), syntax(camlp4o)
 <gtk/*.cmxs>: link_gtk
+<xen/*.cmxs>: link_gnt
 <main/main.native>: linkall
 <main/main.byte>: linkall
