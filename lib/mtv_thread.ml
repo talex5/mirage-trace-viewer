@@ -1,6 +1,6 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-type interaction = Resolve | Read
+type interaction = Resolve | Read | Signal
 
 type time = float
 
@@ -18,6 +18,7 @@ type t = {
   mutable activations : (time * time) list;
   mutable failure : string option;
   mutable y : float;
+  mutable last_signalled : time;  (* (used to calculate end_time) *)
 }
 
 type mutable_counter = {
@@ -32,7 +33,7 @@ type vat = {
 
 (* For threads with no end. Call before we reverse the lists. *)
 let last_event_time t =
-  let last = ref t.start_time in
+  let last = ref (max t.start_time t.last_signalled) in
   begin match t.creates with
   | child :: _ -> last := max !last child.start_time
   | _ -> () end;
@@ -64,6 +65,7 @@ let make_thread ~tid ~start_time ~thread_type = {
   failure = None;
   resolved = false;
   y = -.infinity;
+  last_signalled = -.infinity;
 }
 
 let rec iter fn thread =
@@ -193,6 +195,12 @@ let of_events ?(simplify=true) events =
         let b = get_thread b in
         switch time (Some a);
         a.interactions <- (time, Read, b) :: a.interactions;
+    | Signals (a, b) ->
+        let a = get_thread a in
+        let b = get_thread b in
+        switch time (Some b);
+        a.interactions <- (time, Signal, b) :: a.interactions;
+        b.last_signalled <- time;
     | Label (a, msg) ->
         if a <> -1 then (
           let a = get_thread a in
