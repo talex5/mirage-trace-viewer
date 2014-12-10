@@ -308,6 +308,13 @@ module Make (C : CANVAS) = struct
       | Mtv_thread.Resolve when Mtv_thread.id t <> -1 -> arrow v cr t start_time other end_time c
       | _ -> ()
     );
+    let c = (1.0, 0.6, 0.0) in
+    begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
+    Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+      match op with
+      | Mtv_thread.Signal -> arrow v cr t start_time other end_time c
+      | _ -> ()
+    );
 
     let text_visible t =
       let vert_dist = Mtv_view.dist_from_focus v t in

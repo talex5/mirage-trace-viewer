@@ -147,6 +147,10 @@ let from_bigarray stream_data =
           | 8 ->
               let duration = read64 () in
               Gc (Int64.to_float duration /. 1_000_000_000.)
+          | 9 ->
+              let sender = read_thread () in
+              let recv = read_thread () in
+              Signals (sender, recv)
           | x -> error "Unknown event op %d" x in
         let event = {
           time = Int64.to_float time /. 1_000_000_000.;

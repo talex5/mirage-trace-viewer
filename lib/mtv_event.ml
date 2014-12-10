@@ -11,6 +11,7 @@ type op =
   | Switch of thread
   | Gc of float
   | Increases of thread * string * int
+  | Signals of thread * thread
 
 type t = {
   time : float;

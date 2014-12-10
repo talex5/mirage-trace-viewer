@@ -42,6 +42,8 @@ let collect_events top =
         | Mtv_thread.Read ->
             let end_time = min time (Mtv_thread.end_time other) in
             (thread, time, op, other, end_time)
+        | Mtv_thread.Signal ->
+            (thread, time, op, other, time)
         | Mtv_thread.Resolve ->
             let start_time = min time (Mtv_thread.end_time thread) in
             (thread, start_time, op, other, time)

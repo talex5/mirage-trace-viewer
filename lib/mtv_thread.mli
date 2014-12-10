@@ -7,7 +7,7 @@ type t
 type vat
 
 type time = float
-type interaction = Resolve | Read
+type interaction = Resolve | Read | Signal
 
 val top_thread : vat -> t
 val gc_periods : vat -> (time * time) list
