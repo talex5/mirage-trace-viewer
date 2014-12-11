@@ -23,6 +23,10 @@ type t = {
   arrow_events_by_second : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
 }
 
+let clone t = { t with
+    v_projection = { t.v_projection with v_scale = t.v_projection.v_scale }
+  }
+
 let h_margin = 20.
 let v_margin = 30.
 

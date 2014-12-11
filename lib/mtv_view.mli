@@ -71,3 +71,5 @@ val view_width : t -> float
 
 (** The height of the viewport, in screen units. *)
 val view_height : t -> float
+
+val clone : t -> t
