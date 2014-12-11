@@ -26,7 +26,7 @@ type input_method = {
 
 type gnttab_plugin = (module GNTTAB)
 
-type output_plugin = input_method list -> unit
+type output_plugin = input_method list -> [`Ok of unit | `Error of string]
 (** An output plugin can display or output trace data from a source. *)
 
 val register_gnttab : gnttab_plugin -> unit

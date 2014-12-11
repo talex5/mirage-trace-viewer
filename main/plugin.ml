@@ -23,7 +23,7 @@ type input_method = {
   load : unit -> log_buffer;
   name : string;
 }
-type output_plugin = input_method list -> unit
+type output_plugin = input_method list -> [`Ok of unit | `Error of string]
 
 let gnttab_plugin = ref None
 let output_plugin = ref None

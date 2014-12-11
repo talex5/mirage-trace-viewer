@@ -51,8 +51,11 @@ let trace_files =
 
 let view_with_gtk source =
   match Plugin.load_output_plugin "gtk/mtv-gtk-plugin.cma" with
-  | `Ok gtk -> gtk source; `Ok ()
   | `Error msg -> `Error (false, msg)
+  | `Ok gtk ->
+      match gtk source with
+      | `Ok () as ok -> ok
+      | `Error msg -> `Error (false, msg)
 
 let save_as path sources =
   match sources with

@@ -73,7 +73,6 @@ let show_menu ~parent ~v bev =
 let make source =
   let vat = Plugin.load source |> Mtv_thread.of_events in
   let top_thread = Mtv_thread.top_thread vat in
-  GMain.init () |> ignore;
   let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
   win#set_default_size
     ~width:(Gdk.Screen.width () / 2)
@@ -188,6 +187,10 @@ let make source =
 
 let () =
   let run_plugin sources =
-    sources |> List.iter make;
-    GMain.Main.main () in
+    try
+      GMain.init () |> ignore;
+      sources |> List.iter make;
+      GMain.Main.main ();
+      `Ok ()
+    with Gtk.Error msg -> `Error msg in
   Plugin.register_output run_plugin
