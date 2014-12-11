@@ -30,11 +30,37 @@ let output_method =
 
   Term.(ret (pure choose_output $ flags $ html_output $ write))
 
+let copy src dst =
+  let len = 4096 in
+  let buf = String.make len ' ' in
+  let rec aux () =
+    match input src buf 0 len with
+    | 0 -> ()
+    | n -> output dst buf 0 n; aux () in
+  aux ()
+
+let open_trace_file = function
+  | "-" ->
+      let tmp = Filename.temp_file "mtv-" ".ctf" in
+      let fd = Unix.(openfile tmp [O_RDWR] 0) in
+      let fd2 = Unix.(openfile tmp [O_RDONLY] 0) in
+      Unix.unlink tmp;
+      let ch = Unix.out_channel_of_descr fd in
+      copy stdin ch;
+      close_out ch;
+      fd2
+  | trace_file ->
+      Unix.(openfile trace_file [O_RDONLY] 0)
+
 let parse_trace_filename trace_file =
-  fst Arg.non_dir_file trace_file >>= fun trace_file ->
+  let trace_file =
+    match trace_file with
+    | "-" -> `Ok "-"
+    | trace_file -> fst Arg.non_dir_file trace_file in
+  trace_file >>= fun trace_file ->
   let load () =
     let open Bigarray in
-    let fd = Unix.(openfile trace_file [O_RDONLY] 0) in
+    let fd = open_trace_file trace_file in
     let size = Unix.((fstat fd).st_size) in
     let ba = Array1.map_file fd char c_layout false size in
     Unix.close fd;
@@ -58,16 +84,22 @@ let view_with_gtk source =
       | `Error msg -> `Error (false, msg)
 
 let save_as path sources =
+  let open Bigarray in
   match sources with
   | [source] ->
-      let open Bigarray in
       let src = source.Plugin.load () in
-      let fd = Unix.(openfile path [O_RDWR; O_CREAT; O_TRUNC; O_CLOEXEC] 0o644) in
-      let size = Array1.dim src in
-      Unix.ftruncate fd size;
-      let dst = Array1.map_file fd char c_layout true size in
-      Array1.blit src dst;
-      Unix.close fd;
+      begin match path with
+      | "-" ->
+          for i = 0 to Array1.dim src - 1 do
+            output_char stdout (Array1.get src i)
+          done
+      | path ->
+          let fd = Unix.(openfile path [O_RDWR; O_CREAT; O_TRUNC; O_CLOEXEC] 0o644) in
+          let size = Array1.dim src in
+          Unix.ftruncate fd size;
+          let dst = Array1.map_file fd char c_layout true size in
+          Array1.blit src dst;
+          Unix.close fd end;
       `Ok ()
   | _ -> `Error (true, "Save only works with a single input source")
 
@@ -111,6 +143,8 @@ let () =
     `P "mirage-trace-viewer --gtk trace.ctf";
     `P "To generate HTML and JavaScript files in $(b,htdocs):";
     `P "mirage-trace-viewer --html htdoc trace1.ctf trace2.ctf";
+    `P "To display a trace from a remote Xen guest:";
+    `P "ssh xen-dom0 mirage-trace-viewer -d my-xen-guest -w - | mirage-trace-viewer -";
     `P "To view the trace buffer of a Xen guest in a browser:";
     `P "mirage-trace-viewer --web-server --dom mydomain";
   ] in
