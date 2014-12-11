@@ -13,16 +13,32 @@ type t = {
   refs : int list;
 }
 
+type domid = int
+
+let domid_of_string s =
+  try `Ok (int_of_string s)
+  with _ ->
+    let c = Xs.make () in
+    let vms = Xs.(immediate c (fun h -> directory h "/local/domain")) in
+    let rec aux = function
+      | [] -> `Error (Printf.sprintf "Domain '%s' not found" s)
+      | x::_ when Xs.(immediate c (fun h -> read h (Printf.sprintf "/local/domain/%s/name" x))) = s ->
+          `Ok (int_of_string x)
+      | _::xs -> aux xs in
+    aux vms
+
 let connect dom =
-  let dom = int_of_string dom in
   let c = Xs.make () in
   let domainpath = Xs.(immediate c (fun h -> getdomainpath h dom)) in
-  let xs_path = Printf.sprintf "%s/data/mprof" domainpath in
-  let refs =
-    Xs.(immediate c (fun h -> read h (xs_path ^ "/ring-ref")))
-    |> Str.split (Str.regexp_string ",")
-    |> List.map int_of_string in
-  `Ok { dom; refs }
+  let xs_path = Printf.sprintf "%s/data/mprof/ring-ref" domainpath in
+  try
+    let refs =
+      Xs.(immediate c (fun h -> read h xs_path))
+      |> Str.split (Str.regexp_string ",")
+      |> List.map int_of_string in
+    `Ok { dom; refs }
+  with Xs_protocol.Enoent "read" ->
+    `Error (Printf.sprintf "No path %s found in XenStore - domain not configured for tracing?" xs_path)
 
 let page_size = 4096
 

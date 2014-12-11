@@ -75,15 +75,16 @@ let view sources = function
   | `Html dir -> Html.write_to dir sources
   | `Default -> view_with_gtk sources  (* TODO *)
 
-let parse_domain_id domid =
+let parse_domain_id dom_name =
   Plugin.load_gnttab_plugin "xen/mtv-xen-plugin.cma" >>= fun (module G : Plugin.GNTTAB) ->
+  Xen_trace_source.domid_of_string dom_name >>= fun domid ->
   Xen_trace_source.connect domid >>= fun source ->
   let load () =
     let open Bigarray in
     let ba = Array1.create char c_layout (Xen_trace_source.size source) in
     Xen_trace_source.load (module G) source ba;
     ba in
-  `Ok { Plugin.load; name = domid }
+  `Ok { Plugin.load; name = dom_name }
 
 let xen_domain_id : (_ Arg.converter) = (parse_domain_id, format_source)
 
