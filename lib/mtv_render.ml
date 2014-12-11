@@ -375,14 +375,15 @@ module Make (C : CANVAS) = struct
       let y = ref (y_of_value first_value) in
       C.move_to cr ~x:0.0 ~y:!y;
       begin try
-        values |> Array.iter (fun (time, value) ->
+        for i = first_visible to Array.length values - 1 do
+          let time, value = Array.get values i in
           let x = Mtv_view.clip_x_of_time v time in
           C.line_to cr ~x ~y:!y;
+          if x > Mtv_view.view_width v then raise Exit;
           let new_y = y_of_value value in
           C.line_to cr ~x ~y:new_y;
-          if x > Mtv_view.view_width v then raise Exit;
           y := new_y;
-        )
+        done
       with Exit -> () end;
       C.line_to cr ~x:(Mtv_view.view_width v) ~y:!y;
       C.stroke cr;
