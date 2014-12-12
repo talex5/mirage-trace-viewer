@@ -13,24 +13,34 @@ for it.</description>
   <category>Development</category>
 
   <group license="OSI Approved :: BSD-2-Clause">
-    <command name="compile" shell-command="$SRCDIR/0install/build.sh">
-      <compile:implementation xmlns:compile="http://zero-install.sourceforge.net/2006/namespaces/0compile">
-	<command name="run" path="bin/mirage-trace-viewer"/>
-      </compile:implementation>
-    </command>
+    <group>
+      <command name="compile" shell-command="$SRCDIR/0install/build.sh">
+	<compile:implementation xmlns:compile="http://zero-install.sourceforge.net/2006/namespaces/0compile">
+	  <command name="run" path="bin/mirage-trace-viewer"/>
+	</compile:implementation>
+      </command>
 
-    <implementation arch="*-src" compile:dup-src="true" id="sha1new=9d783aceeb10992bb341d67da9a105b03c360f3d" released="2014-12-12" version="0.1">
-      <manifest-digest sha256new="NKDNFAJU6WTUHX3K57RN57BLRSWJCPVYZW66DMYGO7QLPB3ZYCKA"/>
-      <archive extract="mirage-trace-viewer-0.1" href="https://github.com/talex5/mirage-trace-viewer/archive/v0.1.tar.gz" size="139553"/>
-    </implementation>
+      <implementation arch="*-src" compile:dup-src="true" id="sha1new=9d783aceeb10992bb341d67da9a105b03c360f3d" released="2014-12-12" version="0.1">
+	<manifest-digest sha256new="NKDNFAJU6WTUHX3K57RN57BLRSWJCPVYZW66DMYGO7QLPB3ZYCKA"/>
+	<archive extract="mirage-trace-viewer-0.1" href="https://github.com/talex5/mirage-trace-viewer/archive/v0.1.tar.gz" size="139553"/>
+      </implementation>
+    </group>
+
+    <group arch="Linux-armv7l">
+      <implementation id="sha1new=d6062559bba21073b7ab54314206cc0460fa609a" released="2014-12-12" version="0.1">
+	<command name="run" path="bin/mirage-trace-viewer"/>
+	<manifest-digest sha256new="SFCMBF4AXIEDAXA3DUZO66HPAAAZBPO4XLRCNSRM6IV45WW72W4A"/>
+	<archive extract="mirage-trace-viewer-linux-armv7l-0.1" href="https://github.com/talex5/mirage-trace-viewer/releases/download/v0.1/mirage-trace-viewer-linux-armv7l-0.1.tar.bz2" size="1528823"/>
+      </implementation>
+    </group>
   </group>
 </interface>
 <!-- Base64 Signature
-iQEcBAABCgAGBQJUivWAAAoJEAcTP5bKdNi6lwIIAJ2gJ4JrXwgmu2LeLlN9sqOz/Or02s7qd1qN
-4xYleqEHgyrkidV+s2xu4UKMPJQ0pzJAS5w1ABU9lc1Xg+KdHBWeSLvMNhTgnwH0rTGCid7IbMVI
-yGft8n7iq1Km+coRr3UqAFRuejPtHkm+GJ3m0IvJqh66t3LzPpLV+Is4pSdXFhF7wUgf3/pkiBII
-VVaSL0Mk7eyH6OkWSmnMYedwV8APWtczA6SJx8BKXIk1J6yJQs1cMY1mMh/F2042Qse5ZalnIDXE
-0KQjnjiDJH9THeosHjZywn9zaSYycqLbHO+XSreTjPc4KKruXPvBukd5KbFlH6X46+zSqlbOQBtm
-RI0=
+iQEcBAABCgAGBQJUiv/hAAoJEAcTP5bKdNi69xEH/0dDaT6CTZ0tvpgKqQDaO4j94P5OgiM7JoqB
+mRWZFGKKcrzZ0/QM3NFP6ax+MMPfIn8J8MBclyQ+sk5hlevY/8SVtq58FaYkMOT8pjULgEeEMITL
+U3Trkzo83XDUI4paQGNrnjQqn9CQLGX6FD2G8IPhnMDIAFHuyVE33b8itkOYGfta5wGrUAMzqmgL
+CuV4ZNFLkGOOvp7DQkoHV8cHTG39ZQqJSf8NJCnOlsEtgnZww/wO9tqYnV/T1+yqmipZBVajkeIp
+yh/7E1JkeryrZWnsHxWxPspRjDn5/fmKN9VGtbliKseCe6jGM1HozP2/v+xS4m5C9HbJLxdjLscy
+68U=
 
 -->
