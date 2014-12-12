@@ -12,7 +12,7 @@ let output_method =
   let flags =
     Arg.(value @@ vflag `Default [
       `Gtk, info ["gtk"] ~docs ~doc:"Display in a GTK window.";
-      `Web, info ["web-server"] ~docs ~doc:"Run a web-server showing the trace.";
+(*       `Web, info ["web-server"] ~docs ~doc:"Run a web-server showing the trace."; *)
     ]) in
   let html_output =
     let doc = "Output files for a static web site." in
@@ -106,9 +106,13 @@ let save_as path sources =
 let view sources = function
   | `Gtk -> view_with_gtk sources
   | `Write path -> save_as path sources
-  | `Web -> `Error (false, "Not implemented")  (* TODO *)
+(*   | `Web -> `Error (false, "Not implemented")  (* TODO *) *)
   | `Html dir -> Html.write_to dir sources
-  | `Default -> view_with_gtk sources  (* TODO *)
+  | `Default ->
+      match view_with_gtk sources with
+      | `Ok () as ok -> ok
+      | `Error (_, msg) -> 
+          `Error (false, Printf.sprintf "GTK plugin failed: %s\nHint: try --html=dir instead." msg)
 
 let parse_domain_id dom_name =
   Plugin.load_gnttab_plugin "xen/mtv-xen-plugin.cma" >>= fun (module G : Plugin.GNTTAB) ->
@@ -145,8 +149,10 @@ let () =
     `P "mirage-trace-viewer --html htdoc trace1.ctf trace2.ctf";
     `P "To display a trace from a remote Xen guest:";
     `P "ssh xen-dom0 mirage-trace-viewer -d my-xen-guest -w - | mirage-trace-viewer -";
+(*
     `P "To view the trace buffer of a Xen guest in a browser:";
     `P "mirage-trace-viewer --web-server --dom mydomain";
+*)
   ] in
   let info = Term.info ~doc ~man "mirage-trace-viewer" in
   let input_source = Term.(ret (pure get_input $ trace_files $ trace_dom)) in
