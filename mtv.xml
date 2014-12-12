@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet type='text/xsl' href='interface.xsl'?>
+<interface uri="http://talex5.github.io/mirage-trace-viewer/mtv.xml" xmlns="http://zero-install.sourceforge.net/2004/injector/interface" xmlns:compile="http://zero-install.sourceforge.net/2006/namespaces/0compile">
+  <name>mirage-trace-viewer</name>
+  <summary>viewer for mirage-profile trace files</summary>
+
+  <description>
+Can load trace data from a file, a running Unix process or a Xen domain and save
+it to a CTF file, display it in a GTK window, or generate a JavaScript viewer
+for it.</description>
+
+  <homepage>https://github.com/talex5/mirage-trace-viewer</homepage>
+  <category>Development</category>
+</interface>
+<!-- Base64 Signature
+iQEcBAABCgAGBQJUiuuzAAoJEAcTP5bKdNi6FwsH+wbj2RFVSjDs10z3aHZRD1l87F1IUA3LpETB
+8QD7vw5GW2oU6XTf6Wm0gzfBnfoHzt52AX9eKNGNab+nJjUujLUoGuhSiIuqG+OnsriB0lIe/YGO
+A77cVXv7Df0bD4qpJDUQFlbJOCW02/jZIcEvi0Kms0jgD0jc0zH78pBOTPyholL7rgHhiahZ2AxV
+s+r8IZ/KKqL3h9VXNyUHERVFeubED6oUEdXYbPHOZyuvh8cIq/hKM0ZzxceubgNm3WY3hjL60NNK
+Fr9HWO7qfyF3qHJCIQ7QRPTWSgp34ADmVLPW1qL0dUKWbZ2nI6Zvp6KHNkXOfXeSOOgAl5GePhab
+ZSM=
+
+-->
