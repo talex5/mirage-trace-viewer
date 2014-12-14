@@ -8,7 +8,7 @@ bug-reports: "https://github.com/talex5/mirage-trace-viewer"
 license: "BSD-2-Clause"
 build: [
   ["./configure" "--prefix=%{prefix}%"
-    "--disable-collect"
+    "--disable-xen"
     "--enable-gtk"
     "--enable-javascript"
   ]
