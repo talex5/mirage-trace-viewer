@@ -118,7 +118,7 @@ let from_bigarray stream_data =
           | 1 ->
               let reader = read_thread () in
               let input = read_thread () in
-              Reads (reader, input)
+              Reads (reader, input, Read_resolved)
           | 2 ->
               let resolver = read_thread () in
               let thread = read_thread () in
@@ -151,6 +151,10 @@ let from_bigarray stream_data =
               let recv = read_thread () in
               let sender = read_thread () in
               Signals (sender, recv)
+          | 10 ->
+              let reader = read_thread () in
+              let input = read_thread () in
+              Reads (reader, input, Read_sleeping)
           | x -> error "Unknown event op %d" x in
         let event = {
           time = Int64.to_float time /. 1_000_000_000.;

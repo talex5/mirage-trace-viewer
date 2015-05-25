@@ -295,6 +295,13 @@ module Make (C : CANVAS) = struct
     let vis_arrows_min = visible_t_min -. view_timespace in
     let vis_arrows_max = visible_t_max +. view_timespace in
     thin cr;
+    let c = (0.8, 0.8, 0.4) in
+    begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
+    Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->
+      match op with
+      | Mtv_thread.Try_read -> arrow v cr t start_time other end_time c
+      | _ -> ()
+    );
     let c = (0.0, 0.0, 1.0) in
     begin let r, g, b = c in C.set_source_rgb cr ~r ~g ~b end;
     Mtv_view.iter_interactions v vis_arrows_min vis_arrows_max (fun (t, start_time, op, other, end_time) ->

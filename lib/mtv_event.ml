@@ -2,9 +2,11 @@ let printf = Printf.printf
 
 type thread = int
 
+type read_outcome = Read_resolved | Read_sleeping
+
 type op = 
   | Creates of thread * thread * string
-  | Reads of thread * thread
+  | Reads of thread * thread * read_outcome
   | Resolves of thread * thread * string option
   | Becomes of thread * thread
   | Label of thread * string

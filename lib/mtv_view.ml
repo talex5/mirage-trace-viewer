@@ -43,7 +43,7 @@ let collect_events top =
     let interactions = Mtv_thread.interactions thread
       |> List.map (fun (time, op, other) ->
         match op with
-        | Mtv_thread.Read ->
+        | Mtv_thread.Read | Mtv_thread.Try_read ->
             let end_time = min time (Mtv_thread.end_time other) in
             (thread, time, op, other, end_time)
         | Mtv_thread.Signal ->

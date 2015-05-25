@@ -1,6 +1,6 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-type interaction = Resolve | Read | Signal
+type interaction = Resolve | Read | Try_read | Signal
 
 type time = float
 
@@ -18,7 +18,7 @@ type t = {
   mutable activations : (time * time) list;
   mutable failure : string option;
   mutable y : float;
-  mutable last_signalled : time;  (* (used to calculate end_time) *)
+  mutable last_signalled_or_checked : time;  (* (used to calculate end_time) *)
 }
 
 type mutable_counter = {
@@ -32,8 +32,8 @@ type vat = {
 }
 
 (* For threads with no end. Call before we reverse the lists. *)
-let last_event_time t =
-  let last = ref (max t.start_time t.last_signalled) in
+let last_event_time ~trace_end t =
+  let last = ref (max t.start_time t.last_signalled_or_checked) in
   begin match t.creates with
   | child :: _ -> last := max !last child.start_time
   | _ -> () end;
@@ -41,6 +41,7 @@ let last_event_time t =
   | Some child -> last := max !last child.start_time
   | None -> () end;
   begin match t.labels with
+  | (_time, "__should_resolve") :: _ -> last := trace_end
   | (time, _) :: _ -> last := max !last time
   | _ -> () end;
   begin match t.interactions with
@@ -65,7 +66,7 @@ let make_thread ~tid ~start_time ~thread_type = {
   failure = None;
   resolved = false;
   y = -.infinity;
-  last_signalled = -.infinity;
+  last_signalled_or_checked = -.infinity;
 }
 
 let rec iter fn thread =
@@ -190,17 +191,26 @@ let of_events ?(simplify=true) events =
         begin match !running_thread with
         | Some (_t, current_thread) when current_thread.tid = a.tid -> switch time b
         | _ -> () end
-    | Reads (a, b) ->
+    | Reads (a, b, Read_resolved) ->
         let a = get_thread a in
         let b = get_thread b in
         switch time (Some a);
-        a.interactions <- (time, Read, b) :: a.interactions;
+        let interactions =
+          match a.interactions with
+          | (_, Try_read, b2) :: rest when b == b2 -> rest  (* Simplify *)
+          | all -> all in
+        a.interactions <- (time, Read, b) :: interactions;
+    | Reads (a, b, Read_sleeping) ->
+        let a = get_thread a in
+        let b = get_thread b in
+        a.interactions <- (time, Try_read, b) :: a.interactions;
+        b.last_signalled_or_checked <- time;
     | Signals (a, b) ->
         let a = get_thread a in
         let b = get_thread b in
         switch time (Some b);
         a.interactions <- (time, Signal, b) :: a.interactions;
-        b.last_signalled <- time;
+        b.last_signalled_or_checked <- time;
     | Label (a, msg) ->
         if a <> -1 then (
           let a = get_thread a in
@@ -225,7 +235,7 @@ let of_events ?(simplify=true) events =
       | Some failure -> (t.end_time, failure) :: t.labels in
     if t.end_time = infinity then (
       (* It probably got GC'd, but we don't see that. Make it disappear soon after its last event. *)
-      t.end_time <- last_event_time t +. 0.000_001;
+      t.end_time <- last_event_time ~trace_end:top_thread.end_time t +. 0.000_001;
     );
     t.labels <- List.rev labels;
   );
