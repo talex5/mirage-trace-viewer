@@ -49,6 +49,21 @@ let export_as_svg v fname =
 let show_menu ~parent ~v bev =
   let menu = GMenu.menu () in
   let packing = menu#add in
+  let metrics = Mtv_view.vat v |> Mtv_thread.counters in
+  if metrics <> [] then (
+    let metrics_items = GMenu.menu_item ~packing ~label:"Metrics" () in
+    let metrics_menu = GMenu.menu () in
+    metrics_items#set_submenu metrics_menu;
+    let packing = metrics_menu#add in
+    metrics |> List.iter (fun metric ->
+      let open Mtv_counter in
+      let item = GMenu.check_menu_item ~packing ~label:metric.Mtv_counter.name ~active:metric.shown () in
+      item#connect#activate ==> (fun () ->
+        metric.shown <- not metric.shown;
+        GtkBase.Widget.queue_draw parent#as_widget
+      );
+    );
+  );
   let export_svg = GMenu.menu_item ~packing ~label:"Export as SVG..." () in
   export_svg#connect#activate ==> (fun () ->
     let save_box = GWindow.file_chooser_dialog

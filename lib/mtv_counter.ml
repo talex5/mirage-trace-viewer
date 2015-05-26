@@ -8,4 +8,5 @@ type t = {
   values : (time * float) array;  (* Sorted by time *)
   min : float;
   max : float;
+  mutable shown : bool;
 }

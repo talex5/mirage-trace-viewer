@@ -246,6 +246,7 @@ let of_events ?(simplify=true) events =
       values;
       min = !low;
       max = !high;
+      shown = true;
     } in
     vat.counters <- counter :: vat.counters
   );
