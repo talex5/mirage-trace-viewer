@@ -237,18 +237,22 @@ module Make (C : CANVAS) = struct
     draw_grid v cr expose_min_x expose_max_x;
 
     (* Draw the thread lines. *)
+    let failed_thread_lines = ref [] in
+    let draw_thread_line start_x end_x y =
+      C.move_to cr ~x:start_x ~y;
+      C.line_to cr ~x:end_x ~y;
+      C.stroke cr in
     let visible_t_min = Mtv_view.time_of_x v expose_min_x in
     let visible_t_max = Mtv_view.time_of_x v expose_max_x in
     let visible_threads = Mtv_view.visible_threads v (visible_t_min, visible_t_max) in
     named_thread cr;
     visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
-    let t = i.Interval_tree.Interval.value in
+      let t = i.Interval_tree.Interval.value in
       let start_x = Mtv_view.clip_x_of_time v (Mtv_thread.start_time t) in
       let end_x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
       let y = Mtv_view.y_of_thread v t in
-      C.move_to cr ~x:start_x ~y;
-      C.line_to cr ~x:end_x ~y;
-      C.stroke cr;
+      if Mtv_thread.failure t = None then draw_thread_line start_x end_x y
+      else failed_thread_lines := (start_x, end_x, y) :: !failed_thread_lines;
       Mtv_thread.creates t |> List.iter (fun child ->
         let child_start_time = Mtv_thread.start_time child in
         if Mtv_thread.show_creation child then
@@ -273,18 +277,6 @@ module Make (C : CANVAS) = struct
       Mtv_thread.activations t |> List.iter (fun (start_time, end_time) ->
         C.move_to cr ~x:(max expose_min_x (Mtv_view.clip_x_of_time v start_time)) ~y;
         C.line_to cr ~x:(min expose_max_x (Mtv_view.clip_x_of_time v end_time)) ~y;
-        C.stroke cr;
-      )
-    );
-
-    failed cr;
-    visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
-      let t = i.Interval_tree.Interval.value in
-      if Mtv_thread.failure t <> None then (
-        let y = Mtv_view.y_of_thread v t in
-        let x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
-        C.move_to cr ~x ~y:(y -. 8.);
-        C.line_to cr ~x ~y:(y +. 8.);
         C.stroke cr;
       )
     );
@@ -370,6 +362,14 @@ module Make (C : CANVAS) = struct
         draw_label cr ~v ~y ~min_x:start_x ~max_x:end_x start_x (Mtv_thread.thread_type t)
         |> ignore;
       )
+    );
+
+    failed cr;
+    !failed_thread_lines |> List.iter (fun (start_x, end_x, y) ->
+      draw_thread_line start_x end_x y;
+      C.move_to cr ~x:end_x ~y:(y -. 8.);
+      C.line_to cr ~x:end_x ~y:(y +. 8.);
+      C.stroke cr;
     );
 
     let stat_labels = ref [] in
