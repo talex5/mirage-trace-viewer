@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 22b4c30f67a32ecad7ee7f7f352b52c3)
+# DO NOT EDIT (digest: 88621946893bd7fef69994d6915ed60d)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
 requires = "itv-tree ocplib-endian.bigstring cmdliner"
@@ -8,6 +8,17 @@ archive(byte, plugin) = "mirage-trace-viewer.cma"
 archive(native) = "mirage-trace-viewer.cmxa"
 archive(native, plugin) = "mirage-trace-viewer.cmxs"
 exists_if = "mirage-trace-viewer.cma"
+package "xen" (
+ version = "0.1"
+ description = "Graphical viewer of Lwt trace logs"
+ requires = "xen-gnt xen-gnt.unix main io-page.xen"
+ archive(byte) = "mtv-xen-plugin.cma"
+ archive(byte, plugin) = "mtv-xen-plugin.cma"
+ archive(native) = "mtv-xen-plugin.cmxa"
+ archive(native, plugin) = "mtv-xen-plugin.cmxs"
+ exists_if = "mtv-xen-plugin.cma"
+)
+
 package "js" (
  version = "0.1"
  description = "Graphical viewer of Lwt trace logs"

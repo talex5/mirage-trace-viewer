@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 27688bb0cc4647a5e38b96e78b30a4e7)
+# DO NOT EDIT (digest: b37d5577756d7fc00d8ca540faf35255)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
-requires = "xen-gnt xen-gnt.unix main"
+requires = "xen-gnt xen-gnt.unix main io-page.xen"
 archive(byte) = "mtv-xen-plugin.cma"
 archive(byte, plugin) = "mtv-xen-plugin.cma"
 archive(native) = "mtv-xen-plugin.cmxa"
