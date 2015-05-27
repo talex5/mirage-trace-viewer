@@ -51,6 +51,6 @@ let load (module G : Plugin.GNTTAB) t ba =
   t.refs |> List.iter (fun ref ->
     let mapping = G.(map_exn iface {domid = t.dom; ref} false |> Local_mapping.to_buf) in
     let dst = Array1.sub ba !pos page_size in
-    Array1.blit mapping dst;
+    Array1.blit (Cstruct.to_bigarray (Io_page.to_cstruct mapping)) dst;
     pos := !pos + page_size;
   )
