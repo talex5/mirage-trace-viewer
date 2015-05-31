@@ -1,9 +1,9 @@
 # OASIS_START
-# DO NOT EDIT (digest: 9278910d044a17df33ed70fe139bd854)
+# DO NOT EDIT (digest: b967b4347b197f381eb0c4da8aebefe5)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
 requires =
-"mirage-trace-viewer dynlink xenstore.client xenstore.unix xenstore_transport.unix threads str mirage-profile"
+"mirage-trace-viewer dynlink xenstore.client xenstore.unix xenstore_transport.unix threads str mirage-profile io-page"
 archive(byte) = "main.cma"
 archive(byte, plugin) = "main.cma"
 archive(native) = "main.cmxa"

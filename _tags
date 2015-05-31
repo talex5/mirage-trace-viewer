@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 4b73126f0ccfafeb1624a594bddf2a2e)
+# DO NOT EDIT (digest: d793b094ac58668a7d5a933dd1c6ac14)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -35,6 +35,7 @@ true: annot, bin_annot
 <gtk/*.ml{,i,y}>: pkg_cairo2.lablgtk2
 <gtk/*.ml{,i,y}>: pkg_cmdliner
 <gtk/*.ml{,i,y}>: pkg_dynlink
+<gtk/*.ml{,i,y}>: pkg_io-page
 <gtk/*.ml{,i,y}>: pkg_itv-tree
 <gtk/*.ml{,i,y}>: pkg_lablgtk2
 <gtk/*.ml{,i,y}>: pkg_mirage-profile
@@ -49,6 +50,8 @@ true: annot, bin_annot
 # Executable mirage-trace-viewer
 <main/main.{native,byte}>: pkg_cmdliner
 <main/main.{native,byte}>: pkg_dynlink
+<main/main.{native,byte}>: pkg_io-page
+<main/main.{native,byte}>: pkg_io-page.unix
 <main/main.{native,byte}>: pkg_itv-tree
 <main/main.{native,byte}>: pkg_mirage-profile
 <main/main.{native,byte}>: pkg_ocplib-endian.bigstring
@@ -61,6 +64,8 @@ true: annot, bin_annot
 <main/main.{native,byte}>: use_mirage-trace-viewer
 <main/*.ml{,i,y}>: pkg_cmdliner
 <main/*.ml{,i,y}>: pkg_dynlink
+<main/*.ml{,i,y}>: pkg_io-page
+<main/*.ml{,i,y}>: pkg_io-page.unix
 <main/*.ml{,i,y}>: pkg_itv-tree
 <main/*.ml{,i,y}>: pkg_mirage-profile
 <main/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
@@ -75,6 +80,8 @@ true: annot, bin_annot
 "xen/mtv-xen-plugin.cmxs": use_mtv-xen-plugin
 <xen/*.ml{,i,y}>: pkg_cmdliner
 <xen/*.ml{,i,y}>: pkg_dynlink
+<xen/*.ml{,i,y}>: pkg_io-page
+<xen/*.ml{,i,y}>: pkg_io-page.xen
 <xen/*.ml{,i,y}>: pkg_itv-tree
 <xen/*.ml{,i,y}>: pkg_mirage-profile
 <xen/*.ml{,i,y}>: pkg_ocplib-endian.bigstring

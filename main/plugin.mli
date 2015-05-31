@@ -7,7 +7,7 @@ type log_buffer = (char, int8_unsigned_elt, c_layout) Array1.t
 module type GNTTAB = sig
   module Local_mapping : sig
     type t
-    val to_buf : t -> log_buffer
+    val to_buf : t -> Io_page.t
   end
   type interface
   type grant = {
