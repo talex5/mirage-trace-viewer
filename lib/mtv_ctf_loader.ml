@@ -20,7 +20,7 @@ let thread_type_of_int = function
   | 11 -> "On_termination"
   | 12 -> "On_any"
   | 13 -> "Ignore_result"
-  | _ -> assert false
+  | x -> Printf.eprintf "Warning: unknown thread type '%d'\n%!" x; "Unknown"
 
 let uuid = "\x05\x88\x3b\x8d\x52\x1a\x48\x7b\xb3\x97\x45\x6a\xb1\x50\x68\x0c"
 
