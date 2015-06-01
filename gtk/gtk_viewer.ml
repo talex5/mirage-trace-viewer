@@ -163,13 +163,17 @@ let make source =
 
   let drag_start = ref None in
   area#event#connect#button_press ==> (fun ev ->
-    match GdkEvent.Button.button ev with
-    | 1 ->
+    match GdkEvent.get_type ev, GdkEvent.Button.button ev with
+    | `BUTTON_PRESS, 1 ->
         let start_t = Mtv_view.time_of_x v (GdkEvent.Button.x ev) in
         let start_y = Mtv_view.y_of_view_y v (GdkEvent.Button.y ev) in
         drag_start := Some (start_t, start_y);
         true;
-    | 3 -> show_menu ~parent:win ~v ev; true
+    | `TWO_BUTTON_PRESS, 1 ->
+        begin match Mtv_view.thread_at v ~x:(GdkEvent.Button.x ev) ~y:(GdkEvent.Button.y ev) with
+        | None -> false
+        | Some thread -> Mtv_thread.dump thread; true end
+    | `BUTTON_PRESS, 3 -> show_menu ~parent:win ~v ev; true
     | _ -> false
   );
 

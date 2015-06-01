@@ -55,3 +55,6 @@ val id : t -> int
 val iter : (t -> unit) -> t -> unit
 
 val counters : vat -> Mtv_counter.t list
+
+val dump : t -> unit
+(** Dump to console, for debugging *)

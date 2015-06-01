@@ -2,6 +2,12 @@
 
 type interaction = Resolve | Read | Try_read | Signal
 
+let string_of_interaction =  function
+  | Resolve -> "resolve"
+  | Read -> "read"
+  | Try_read -> "try_read"
+  | Signal -> "signal"
+
 type time = float
 
 type t = {
@@ -306,3 +312,30 @@ let compare a b =
   | r -> r
 
 let counters vat = vat.counters
+
+let dump t =
+  let {
+    thread_type; tid; show_creation; start_time; resolved; end_time;
+    creates; becomes; labels; interactions; activations; failure;
+    y; last_signalled_or_checked = _; should_resolve
+  } = t in
+  Printf.printf "[Thread %d (%s):\
+    \n  show_creation=%b should_resolve=%b resolved=%b\
+    \n  time: %f -> %f\
+    \n  creates:%s\
+    \n  becomes: %s\
+    \n  labels:%s\
+    \n  interactions:%s\
+    \n  activations:%s\
+    \n  result: %s\
+    \n  y: %f\n%!"
+    tid thread_type
+    show_creation should_resolve resolved
+    start_time end_time
+    (creates |> List.rev |> List.map (fun thread -> Printf.sprintf "\n  - %d" thread.tid) |> String.concat "")
+    (match becomes with None -> "" | Some t -> string_of_int t.tid)
+    (labels |> List.map (fun (time, msg) -> Printf.sprintf "\n  - %f: %s" time msg) |> String.concat "")
+    (interactions |> List.rev |> List.map (fun (time, i, other) -> Printf.sprintf "\n  - %f: %s %d" time (string_of_interaction i) other.tid) |> String.concat "")
+    (activations |> List.rev |> List.map (fun (t1, t2) -> Printf.sprintf "\n  - %f -> %f" t1 t2) |> String.concat "")
+    (match failure with None -> "OK" | Some msg -> "Failed: " ^ msg)
+    y

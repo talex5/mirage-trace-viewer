@@ -73,3 +73,7 @@ val view_width : t -> float
 val view_height : t -> float
 
 val clone : t -> t
+
+val thread_at : t -> x:float -> y:float -> Mtv_thread.t option
+(** Return the thread at or near to the given point (probably from a mouse click), or
+ * None if there is nothing nearby. *)

@@ -230,3 +230,27 @@ let view_start_time t = t.view_start_time
 let view_width t = t.view_width
 let view_height t = t.view_height
 let grid_step t = t.grid_step
+
+let thread_at v ~x ~y =
+  let range = 16.0 in (* How far you can be from the thread *)
+  let best = ref None in
+  visible_threads v (time_of_x v (x -. range), time_of_x v (x +. range))
+  |> Mtv_layout.IT.IntervalSet.iter (fun i ->
+    let thread = i.Interval_tree.Interval.value in
+    let dist_y = abs_float (y_of_thread v thread -. y) in
+    let start_x = x_of_time v (Mtv_thread.start_time thread) in
+    let end_x = x_of_time v (Mtv_thread.end_time thread) in
+    let dist_x =
+      if x < start_x then start_x -. x
+      else if x > end_x then x -. end_x
+      else 0.0 in
+    let dist = max dist_x dist_y in
+    if dist <= range then (
+      match !best with
+      | Some (best_dist, _) when best_dist <= dist -> ()
+      | _ -> best := Some (dist, thread)
+    )
+  );
+  match !best with
+  | None -> None
+  | Some (_, thread) -> Some thread
