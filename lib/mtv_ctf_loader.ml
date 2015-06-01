@@ -15,6 +15,11 @@ let thread_type_of_int = function
   | 6 -> "Join"
   | 7 -> "Map"
   | 8 -> "Condition"
+  | 9 -> "On_success"
+  | 10 -> "On_failure"
+  | 11 -> "On_termination"
+  | 12 -> "On_any"
+  | 13 -> "Ignore_result"
   | _ -> assert false
 
 let uuid = "\x05\x88\x3b\x8d\x52\x1a\x48\x7b\xb3\x97\x45\x6a\xb1\x50\x68\x0c"
