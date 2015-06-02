@@ -172,7 +172,10 @@ let make source =
     | `TWO_BUTTON_PRESS, 1 ->
         begin match Mtv_view.thread_at v ~x:(GdkEvent.Button.x ev) ~y:(GdkEvent.Button.y ev) with
         | None -> false
-        | Some thread -> Mtv_thread.dump thread; true end
+        | Some thread ->
+            Mtv_view.highlight_related v thread;
+            GtkBase.Widget.queue_draw area#as_widget;
+            Mtv_thread.dump thread; true end
     | `BUTTON_PRESS, 3 -> show_menu ~parent:win ~v ev; true
     | _ -> false
   );

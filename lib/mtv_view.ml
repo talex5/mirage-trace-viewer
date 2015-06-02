@@ -9,6 +9,8 @@ type v_projection = {
   unstretched_range : float;        (* Distance beween top and bottom. *)
 }
 
+module ThreadSet = Set.Make(Mtv_thread)
+
 type t = {
   vat : Mtv_thread.vat;
   mutable scale : float;
@@ -21,6 +23,7 @@ type t = {
   layout : Mtv_layout.t;
   arrow_events_by_first : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
   arrow_events_by_second : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
+  mutable highlights : ThreadSet.t;
 }
 
 let clone t = { t with
@@ -104,6 +107,7 @@ let make ~view_width ~view_height ~vat =
     layout;
     arrow_events_by_first;
     arrow_events_by_second;
+    highlights = ThreadSet.empty;
   }
 
 let x_of_time v time = (time -. v.view_start_time)  *. v.scale
@@ -254,3 +258,30 @@ let thread_at v ~x ~y =
   match !best with
   | None -> None
   | Some (_, thread) -> Some thread
+
+let highlights t = t.highlights
+let set_highlights t v = t.highlights <- v
+
+let highlight_related v thread =
+  let highlights = ref (ThreadSet.singleton thread) in
+  let rec walk_successors th =
+    match Mtv_thread.becomes th with
+    | Some th ->
+        highlights := !highlights |> ThreadSet.add th;
+        walk_successors th
+    | None -> () in
+  walk_successors thread;
+  let pred = Hashtbl.create 1000 in
+  Mtv_thread.top_thread v.vat |> Mtv_thread.iter (fun th ->
+    match Mtv_thread.becomes th with
+    | None -> ()
+    | Some s -> Hashtbl.add pred s th
+  );
+  let rec walk_preds th =
+    let preds = Hashtbl.find_all pred th in
+    preds |> List.iter (fun th ->
+      highlights := !highlights |> ThreadSet.add th;
+      walk_preds th
+    ) in
+  walk_preds thread;
+  set_highlights v !highlights

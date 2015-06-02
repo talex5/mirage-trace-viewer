@@ -69,6 +69,9 @@ module Make (C : CANVAS) = struct
     C.set_line_width cr 2.0;
     C.set_source_rgb cr ~r:0.6 ~g:0.6 ~b:0.6
 
+  let highlight cr =
+    C.set_source_rgb cr ~r:1.0 ~g:1.0 ~b:0.0
+
   let named_thread cr =
     C.set_line_width cr 2.0;
     C.set_source_rgb cr ~r:0.2 ~g:0.2 ~b:0.2
@@ -245,6 +248,22 @@ module Make (C : CANVAS) = struct
     let visible_t_min = Mtv_view.time_of_x v expose_min_x in
     let visible_t_max = Mtv_view.time_of_x v expose_max_x in
     let visible_threads = Mtv_view.visible_threads v (visible_t_min, visible_t_max) in
+
+    let highlights = Mtv_view.highlights v in
+    if not (Mtv_view.ThreadSet.is_empty highlights) then (
+      highlight cr;
+      visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
+        let t = i.Interval_tree.Interval.value in
+        if Mtv_view.ThreadSet.mem t highlights then (
+          let start_x = Mtv_view.clip_x_of_time v (Mtv_thread.start_time t) in
+          let end_x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
+          let y = Mtv_view.y_of_thread v t in
+          C.rectangle cr ~x:start_x ~y:(y -. 4.0) ~w:(end_x -. start_x) ~h:8.0;
+          C.fill cr;
+        )
+      )
+    );
+
     named_thread cr;
     visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
       let t = i.Interval_tree.Interval.value in

@@ -6,6 +6,8 @@ type v_projection
 
 type t
 
+module ThreadSet : Set.S with type elt = Mtv_thread.t
+
 val h_margin : float
 val v_margin : float
 
@@ -77,3 +79,8 @@ val clone : t -> t
 val thread_at : t -> x:float -> y:float -> Mtv_thread.t option
 (** Return the thread at or near to the given point (probably from a mouse click), or
  * None if there is nothing nearby. *)
+
+val highlights : t -> ThreadSet.t
+val set_highlights : t -> ThreadSet.t -> unit
+val highlight_related : t -> Mtv_thread.t -> unit
+(** Highlight this thread, threads that it becomes or which became it, recursively. *)
