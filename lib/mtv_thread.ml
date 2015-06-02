@@ -24,7 +24,8 @@ type t = {
   mutable activations : (time * time) list;
   mutable failure : string option;
   mutable y : float;
-  mutable last_signalled_or_checked : time;  (* (used to calculate end_time) *)
+  mutable first_checked : time;               (* Prevent bind simplification if we need a try_read arrow first *)
+  mutable last_signalled_or_checked : time;   (* (used to calculate end_time) *)
   mutable should_resolve : bool;
 }
 
@@ -60,6 +61,12 @@ let last_event_time ~trace_end t =
     !last
   )
 
+let scan_first_checked t =
+  t.interactions |> List.iter (function
+    | (time, Try_read, other) -> other.first_checked <- min other.first_checked time
+    | _ -> ()
+  )
+
 let make_thread ~tid ~start_time ~thread_type = {
   thread_type;
   tid;
@@ -74,6 +81,7 @@ let make_thread ~tid ~start_time ~thread_type = {
   failure = None;
   resolved = false;
   y = -.infinity;
+  first_checked = infinity;
   last_signalled_or_checked = -.infinity;
   should_resolve = false;
 }
@@ -109,7 +117,7 @@ let rec simplify_binds parent =
     | _, Some became when became == t -> true
     | ("bind" | "try" | "map" | "ignore_result" | "on_failure" | "on_termination"), _ ->
         begin match first_interaction t with
-        | Some (wake_time, Read, other) ->
+        | Some (wake_time, Read, other) when wake_time < t.first_checked ->
             t.show_creation <- false;
             t.start_time <- wake_time;
             if other == parent then true
@@ -260,6 +268,7 @@ let of_events ?(simplify=true) events =
     );
     t.labels <- List.rev labels;
   );
+  iter scan_first_checked top_thread;
   if simplify then simplify_binds top_thread;
   top_thread |> iter (fun t ->
     if t.labels = [] then t.labels <- [t.start_time, string_of_int t.tid]
@@ -317,7 +326,7 @@ let dump t =
   let {
     thread_type; tid; show_creation; start_time; resolved; end_time;
     creates; becomes; labels; interactions; activations; failure;
-    y; last_signalled_or_checked = _; should_resolve
+    y; first_checked = _; last_signalled_or_checked = _; should_resolve
   } = t in
   Printf.printf "[Thread %d (%s):\
     \n  show_creation=%b should_resolve=%b resolved=%b\
