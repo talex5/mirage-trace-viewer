@@ -252,7 +252,13 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     );
     Js._false in
 
-  let double_click _ev =
+  let double_click ev =
+    let (x, y) = rel_event_coords ev in
+    begin match Mtv_view.thread_at v ~x ~y with
+    | Some thread ->
+        Mtv_view.highlight_related v thread;
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+    | None -> () end;
     let t_min = Mtv_view.view_start_time v in
     let t_max = t_min +. Mtv_view.timespan_of_width v (Mtv_view.view_width v) in
     Printf.printf "?t_min=%f&t_max=%f\n" t_min t_max;
