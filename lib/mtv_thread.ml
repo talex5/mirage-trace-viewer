@@ -107,7 +107,7 @@ let rec simplify_binds parent =
     simplify_binds t;
     begin match t.thread_type, parent.becomes with
     | _, Some became when became == t -> true
-    | ("bind" | "try" | "map"), _ ->
+    | ("bind" | "try" | "map" | "ignore_result" | "on_failure" | "on_termination"), _ ->
         begin match first_interaction t with
         | Some (wake_time, Read, other) ->
             t.show_creation <- false;
