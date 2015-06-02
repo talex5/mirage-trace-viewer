@@ -38,7 +38,7 @@ val interactions : t -> (time * interaction * t) list
 val activations : t -> (time * time) list
 
 (** Does the thread end because it was resolved, or just because we didn't
- * see any more events? *)
+ * see any more events? Only meaningful if [becomes t] is None. *)
 val resolved : t -> bool
 
 (** Parse a trace file, returning the root thread. *)

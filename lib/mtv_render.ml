@@ -277,16 +277,15 @@ module Make (C : CANVAS) = struct
         if Mtv_thread.show_creation child then
           line v cr child_start_time t child
       );
-      begin match Mtv_thread.becomes t with
+      match Mtv_thread.becomes t with
       | Some child when Mtv_thread.y child <> Mtv_thread.y t ->
           line v cr (Mtv_thread.end_time t) t child
-      | _ -> () end;
-      if not (Mtv_thread.resolved t) && end_x -. start_x > 4.0 then (
-        C.move_to cr ~x:end_x ~y;
-        C.line_to cr ~x:(end_x -. 6.) ~y:(y -. 4.);
-        C.line_to cr ~x:(end_x -. 6.) ~y:(y +. 4.);
-        C.fill cr;
-      )
+      | None when not (Mtv_thread.resolved t) && end_x -. start_x > 4.0 ->
+          C.move_to cr ~x:end_x ~y;
+          C.line_to cr ~x:(end_x -. 6.) ~y:(y -. 4.);
+          C.line_to cr ~x:(end_x -. 6.) ~y:(y +. 4.);
+          C.fill cr;
+      | _ -> ()
     );
 
     activation cr;

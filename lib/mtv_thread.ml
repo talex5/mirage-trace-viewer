@@ -26,7 +26,6 @@ type t = {
   mutable y : float;
   mutable first_checked : time;               (* Prevent bind simplification if we need a try_read arrow first *)
   mutable last_signalled_or_checked : time;   (* (used to calculate end_time) *)
-  mutable should_resolve : bool;
 }
 
 type mutable_counter = {
@@ -40,26 +39,24 @@ type vat = {
 }
 
 (* For threads with no end. Call before we reverse the lists. *)
-let last_event_time ~trace_end t =
-  if t.should_resolve then trace_end else (
-    let last = ref (max t.start_time t.last_signalled_or_checked) in
-    begin match t.creates with
-    | child :: _ -> last := max !last child.start_time
-    | _ -> () end;
-    begin match t.becomes with
-    | Some child -> last := max !last child.start_time
-    | None -> () end;
-    begin match t.labels with
-    | (time, _) :: _ -> last := max !last time
-    | _ -> () end;
-    begin match t.interactions with
-    | (time, _, _) :: _ -> last := max !last time
-    | _ -> () end;
-    begin match t.activations with
-    | (_, time) :: _ -> last := max !last time
-    | _ -> () end;
-    !last
-  )
+let last_event_time t =
+  let last = ref (max t.start_time t.last_signalled_or_checked) in
+  begin match t.creates with
+  | child :: _ -> last := max !last child.start_time
+  | _ -> () end;
+  begin match t.becomes with
+  | Some child -> last := max !last child.start_time
+  | None -> () end;
+  begin match t.labels with
+  | (time, _) :: _ -> last := max !last time
+  | _ -> () end;
+  begin match t.interactions with
+  | (time, _, _) :: _ -> last := max !last time
+  | _ -> () end;
+  begin match t.activations with
+  | (_, time) :: _ -> last := max !last time
+  | _ -> () end;
+  !last
 
 let scan_first_checked t =
   t.interactions |> List.iter (function
@@ -83,7 +80,6 @@ let make_thread ~tid ~start_time ~thread_type = {
   y = -.infinity;
   first_checked = infinity;
   last_signalled_or_checked = -.infinity;
-  should_resolve = false;
 }
 
 let rec iter fn thread =
@@ -132,6 +128,14 @@ let rec simplify_binds parent =
     other.creates <- t :: other.creates;
   )
 
+let rec ensure_resolved ~top_thread th =
+  match th.becomes with
+  | None when not th.resolved ->
+      th.failure <- Some "should-resolve thread never resolved";
+      th.end_time <- top_thread.end_time
+  | None -> ()
+  | Some th -> ensure_resolved ~top_thread th
+
 let of_events ?(simplify=true) events =
   let trace_start_time =
     match events with
@@ -179,6 +183,8 @@ let of_events ?(simplify=true) events =
         | Some next -> running_thread := Some (time, next)
         | None -> running_thread := None in
 
+  let should_resolve = ref [] in
+
   events |> List.iter (fun ev ->
     let open Mtv_event in
     let time = ev.time -. trace_start_time in
@@ -203,13 +209,7 @@ let of_events ?(simplify=true) events =
         a.end_time <- time;
         a.resolved <- true;
         assert (a.becomes = None);
-        let b = get_thread b in
-        if a.should_resolve then (
-          b.should_resolve <- true;
-          if not b.resolved then
-            b.failure <- Some "should-resolve thread never resolved"
-        );
-        let b = Some b in
+        let b = Some (get_thread b) in
         a.becomes <- b;
         begin match !running_thread with
         | Some (_t, current_thread) when current_thread.tid = a.tid -> switch time b
@@ -236,10 +236,7 @@ let of_events ?(simplify=true) events =
         b.last_signalled_or_checked <- time;
     | Label (a, "__should_resolve") ->
         let a = get_thread a in
-        a.should_resolve <- true;
-        if not a.resolved then (
-          a.failure <- Some "should-resolve thread never resolved"
-        )
+        should_resolve := a :: !should_resolve;
     | Label (a, msg) ->
         if a <> -1 then (
           let a = get_thread a in
@@ -257,6 +254,10 @@ let of_events ?(simplify=true) events =
         a.labels <- (time, Printf.sprintf "%s%+d" counter amount) :: a.labels
   );
   switch top_thread.end_time None;
+  (* Check that every should-resolve thread did eventually resolve. *)
+  !should_resolve |> List.iter (ensure_resolved ~top_thread);
+  (* Add a label for the final failure, if any.
+   * Set the end-time for unresolved threads. *)
   top_thread |> iter (fun t ->
     let labels =
       match t.failure with
@@ -264,10 +265,11 @@ let of_events ?(simplify=true) events =
       | Some failure -> (t.end_time, failure) :: t.labels in
     if t.end_time = infinity then (
       (* It probably got GC'd, but we don't see that. Make it disappear soon after its last event. *)
-      t.end_time <- last_event_time ~trace_end:top_thread.end_time t +. 0.000_001;
+      t.end_time <- last_event_time t +. 0.000_001;
     );
     t.labels <- List.rev labels;
   );
+  (* Set the [first_checked] fields. *)
   iter scan_first_checked top_thread;
   if simplify then simplify_binds top_thread;
   top_thread |> iter (fun t ->
@@ -326,10 +328,10 @@ let dump t =
   let {
     thread_type; tid; show_creation; start_time; resolved; end_time;
     creates; becomes; labels; interactions; activations; failure;
-    y; first_checked = _; last_signalled_or_checked = _; should_resolve
+    y; first_checked = _; last_signalled_or_checked = _;
   } = t in
   Printf.printf "[Thread %d (%s):\
-    \n  show_creation=%b should_resolve=%b resolved=%b\
+    \n  show_creation=%b resolved=%b\
     \n  time: %f -> %f\
     \n  creates:%s\
     \n  becomes: %s\
@@ -339,7 +341,7 @@ let dump t =
     \n  result: %s\
     \n  y: %f\n%!"
     tid thread_type
-    show_creation should_resolve resolved
+    show_creation resolved
     start_time end_time
     (creates |> List.rev |> List.map (fun thread -> Printf.sprintf "\n  - %d" thread.tid) |> String.concat "")
     (match becomes with None -> "" | Some t -> string_of_int t.tid)
