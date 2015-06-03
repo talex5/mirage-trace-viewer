@@ -406,7 +406,7 @@ module Make (C : CANVAS) = struct
       if counter.shown then (
         let range = counter.max -. counter.min in
         let v_scale = (Mtv_view.view_height v -. (2.0 *. counter_line_width)) /. range in
-        let v_offset = Mtv_view.view_height v *. (1. +. counter.min /. range) -. counter_line_width in
+        let v_offset = Mtv_view.view_height v +. (v_scale *. counter.min) -. counter_line_width in
         let y_of_value value = v_offset -. v_scale *. value in
 
         let values = counter.values in
