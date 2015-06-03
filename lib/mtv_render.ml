@@ -250,6 +250,7 @@ module Make (C : CANVAS) = struct
     let visible_threads = Mtv_view.visible_threads v (visible_t_min, visible_t_max) in
 
     let highlights = Mtv_view.highlights v in
+    let short_highlights = ref [] in
     if not (Mtv_view.ThreadSet.is_empty highlights) then (
       highlight cr;
       visible_threads |> Mtv_layout.IT.IntervalSet.iter (fun i ->
@@ -258,8 +259,11 @@ module Make (C : CANVAS) = struct
           let start_x = Mtv_view.clip_x_of_time v (Mtv_thread.start_time t) in
           let end_x = Mtv_view.clip_x_of_time v (Mtv_thread.end_time t) in
           let y = Mtv_view.y_of_thread v t in
-          C.rectangle cr ~x:start_x ~y:(y -. 4.0) ~w:(end_x -. start_x) ~h:8.0;
-          C.fill cr;
+          if end_x -. start_x < 32.0 then short_highlights := (start_x, end_x, y) :: !short_highlights
+          else (
+            C.rectangle cr ~x:start_x ~y:(y -. 4.0) ~w:(end_x -. start_x) ~h:8.0;
+            C.fill cr;
+          );
           match Mtv_thread.becomes t with
           | Some child when Mtv_thread.y child <> Mtv_thread.y t && Mtv_view.ThreadSet.mem child highlights ->
               let h = Mtv_view.y_of_thread v child -. y in
@@ -435,4 +439,14 @@ module Make (C : CANVAS) = struct
         draw_label cr ~v ~y ~min_x:0.0 ~max_x max_x counter.name |> ignore
       )
     );
+
+    (* Draw these on top of everything else so they can still be seen *)
+    if !short_highlights <> [] then (
+      highlight cr;
+      !short_highlights |> List.iter (fun (start_x, end_x, y) ->
+        C.rectangle cr ~x:(start_x -. 4.0) ~y:(y -. 4.0) ~w:(end_x +. 4.0 -. start_x) ~h:8.0;
+        C.fill cr;
+      )
+    );
+
 end
