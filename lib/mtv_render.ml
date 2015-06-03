@@ -261,7 +261,7 @@ module Make (C : CANVAS) = struct
           C.rectangle cr ~x:start_x ~y:(y -. 4.0) ~w:(end_x -. start_x) ~h:8.0;
           C.fill cr;
           match Mtv_thread.becomes t with
-          | Some child when Mtv_thread.y child <> Mtv_thread.y t ->
+          | Some child when Mtv_thread.y child <> Mtv_thread.y t && Mtv_view.ThreadSet.mem child highlights ->
               let h = Mtv_view.y_of_thread v child -. y in
               C.rectangle cr ~x:(end_x -. 4.0) ~y:(y -. 4.0) ~w:8.0 ~h:(h +. 8.0);
               C.fill cr

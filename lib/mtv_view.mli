@@ -84,3 +84,6 @@ val highlights : t -> ThreadSet.t
 val set_highlights : t -> ThreadSet.t -> unit
 val highlight_related : t -> Mtv_thread.t -> unit
 (** Highlight this thread, threads that it becomes or which became it, recursively. *)
+
+val highlight_matches : t -> (string -> bool) -> unit
+(** [highlight_matches t query] highlights those threads for which [query label] returns [true] for some label. *)

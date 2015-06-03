@@ -85,6 +85,8 @@ let show_menu ~parent ~v bev =
   );
   menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
 
+let ignore_widget : #GObj.widget -> unit = ignore
+
 let make source =
   let vat = Plugin.load source |> Mtv_thread.of_events in
   let top_thread = Mtv_thread.top_thread vat in
@@ -94,11 +96,19 @@ let make source =
     ~height:(Gdk.Screen.height () / 2);
   let hadjustment = GData.adjustment () in
   let vadjustment = GData.adjustment () in
-  let table = GPack.table ~rows:2 ~columns:2 ~homogeneous:false ~packing:win#add () in
+  let table = GPack.table ~rows:3 ~columns:2 ~homogeneous:false ~packing:win#add () in
   let area = GMisc.drawing_area ~packing:(table#attach ~left:0 ~top:0 ~expand:`BOTH ~fill:`BOTH) () in
 
   let _hscroll = GRange.scrollbar `HORIZONTAL ~adjustment:hadjustment ~packing:(table#attach ~left:0 ~top:1 ~expand:`X ~fill:`BOTH) () in
   let _vscroll = GRange.scrollbar `VERTICAL ~adjustment:vadjustment ~packing:(table#attach ~left:1 ~top:0 ~expand:`Y ~fill:`BOTH) () in
+
+  let minibuffer = GPack.hbox
+    ~packing:(table#attach ~left:0 ~top:2 ~right:2 ~fill:`BOTH)
+    ~border_width:4
+    ~show:false
+    () in
+  GMisc.label ~packing:minibuffer#pack ~text:"Search: " () |> ignore_widget;
+  let search_entry = GEdit.entry ~packing:(minibuffer#pack ~expand:true) () in
 
   win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
   win#show ();
@@ -107,6 +117,32 @@ let make source =
   let v = Mtv_view.make ~vat
     ~view_width:(float_of_int alloc.Gtk.width)
     ~view_height:(float_of_int alloc.Gtk.height) in
+
+  search_entry#connect#notify_text ==> (fun text ->
+    if text = "" then Mtv_view.(set_highlights v ThreadSet.empty)
+    else (
+      let re = Str.regexp_string_case_fold text in
+      let query label =
+        try Str.search_forward re label 0 |> ignore; true
+        with Not_found -> false in
+      Mtv_view.highlight_matches v query
+    );
+    GtkBase.Widget.queue_draw area#as_widget
+  );
+
+  win#event#connect#key_press ==> (fun kev ->
+    let keyval = GdkEvent.Key.keyval kev in
+    if keyval = GdkKeysyms._Escape || keyval = GdkKeysyms._Return then
+      (minibuffer#misc#hide (); true)
+    else if minibuffer#misc#visible then false
+    else match GdkEvent.Key.string kev with
+      | "/" ->
+          search_entry#set_text "";
+          minibuffer#misc#show ();
+          search_entry#misc#grab_focus ();
+          true
+      | _ -> false
+  );
 
   let set_scollbars () =
     let (xlo, xhi, xsize, xvalue), (ylo, yhi, ysize, yvalue) = Mtv_view.scroll_bounds v in

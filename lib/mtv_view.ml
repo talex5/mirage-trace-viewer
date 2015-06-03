@@ -285,3 +285,11 @@ let highlight_related v thread =
     ) in
   walk_preds thread;
   set_highlights v !highlights
+
+let highlight_matches v query =
+  let highlights = ref ThreadSet.empty in
+  Mtv_thread.top_thread v.vat |> Mtv_thread.iter (fun th ->
+    if Mtv_thread.labels th |> List.exists (fun (_time, label) -> query label) then
+      highlights := !highlights |> ThreadSet.add th;
+  );
+  set_highlights v !highlights
