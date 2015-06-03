@@ -214,6 +214,7 @@ let of_events ?(simplify=true) events =
         begin match !running_thread with
         | Some (_t, current_thread) when current_thread.tid = a.tid -> switch time b
         | _ -> () end
+    | Reads (_, -1, _) -> ()
     | Reads (a, b, Read_resolved) ->
         let a = get_thread a in
         let b = get_thread b in
