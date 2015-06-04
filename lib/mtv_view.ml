@@ -24,6 +24,7 @@ type t = {
   arrow_events_by_first : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
   arrow_events_by_second : (Mtv_thread.t * Mtv_thread.time * Mtv_thread.interaction * Mtv_thread.t * Mtv_thread.time) array;
   mutable highlights : ThreadSet.t;
+  mutable show_metrics : bool;
 }
 
 let clone t = { t with
@@ -108,6 +109,7 @@ let make ~view_width ~view_height ~vat =
     arrow_events_by_first;
     arrow_events_by_second;
     highlights = ThreadSet.empty;
+    show_metrics = true;
   }
 
 let x_of_time v time = (time -. v.view_start_time)  *. v.scale
@@ -293,3 +295,6 @@ let highlight_matches v query =
       highlights := !highlights |> ThreadSet.add th;
   );
   set_highlights v !highlights
+
+let show_metrics v = v.show_metrics
+let set_show_metrics v show = v.show_metrics <- show

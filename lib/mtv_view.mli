@@ -87,3 +87,6 @@ val highlight_related : t -> Mtv_thread.t -> unit
 
 val highlight_matches : t -> (string -> bool) -> unit
 (** [highlight_matches t query] highlights those threads for which [query label] returns [true] for some label. *)
+
+val show_metrics : t -> bool
+val set_show_metrics : t -> bool -> unit

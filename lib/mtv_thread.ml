@@ -160,6 +160,7 @@ let of_events ?(simplify=true) events =
   let get_scale_for ~min:low ~max:high counter_name =
     let open Mtv_counter in
     let low = min low 0.0 in    (* For now, assume every scale should go down to zero at least. *)
+    let high = if high <= low then low +. 1.0 else high in
     let scale_name = scale_for counter_name in
     try
       let scale = Hashtbl.find scales scale_name in
@@ -324,6 +325,7 @@ let of_events ?(simplify=true) events =
     } in
     vat.counters <- counter :: vat.counters
   );
+  vat.counters <- vat.counters |> List.sort Mtv_counter.(fun a b -> String.compare a.name b.name);
   (* Create pre-existing threads in thread order, not the order we first saw them. *)
   let by_thread_id a b = compare a.tid b.tid in
   top_thread.creates <- List.sort by_thread_id top_thread.creates;

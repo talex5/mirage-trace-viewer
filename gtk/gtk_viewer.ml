@@ -46,46 +46,74 @@ let export_as_svg v fname =
   );
   Cairo.Surface.finish surface
 
-let show_menu ~parent ~v bev =
-  let menu = GMenu.menu () in
-  let packing = menu#add in
-  let metrics = Mtv_view.vat v |> Mtv_thread.counters in
-  if metrics <> [] then (
+let ignore_widget : #GObj.widget -> unit = ignore
+
+let toggle_metrics ~area v =
+  Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
+  GtkBase.Widget.queue_draw area#as_widget
+
+module Menu = struct
+  type t = {
+    menu : GMenu.menu;
+    metrics_menu : GMenu.menu;
+    mutable metrics_items : GObj.widget list;
+  }
+
+  let make ~accel_group ~parent ~show_search ~v =
+    let menu = GMenu.menu () in
+    menu#set_accel_group accel_group;
+    let packing = menu#add in
     let metrics_items = GMenu.menu_item ~packing ~label:"Metrics" () in
-    let metrics_menu = GMenu.menu () in
-    metrics_items#set_submenu metrics_menu;
-    let packing = metrics_menu#add in
+    let metrics_menu =
+      let metrics_menu = GMenu.menu () in
+      metrics_items#set_submenu metrics_menu;
+      let packing = metrics_menu#add in
+      let show_metrics = GMenu.check_menu_item ~packing ~label:"Show metrics" ~active:(Mtv_view.show_metrics v) () in
+      show_metrics#add_accelerator ~group:accel_group GdkKeysyms._space ~flags:[`VISIBLE];
+      show_metrics#connect#activate ==> (fun () -> toggle_metrics ~area:parent v);
+      GMenu.separator_item ~packing () |> ignore_widget;
+      metrics_menu in
+
+    let find = GMenu.menu_item ~packing ~label:"Find ..." () in
+    find#add_accelerator ~group:accel_group GdkKeysyms._slash ~flags:[`VISIBLE];
+    find#connect#activate ==> show_search;
+    let export_svg = GMenu.menu_item ~packing ~label:"Export as SVG..." () in
+    export_svg#connect#activate ==> (fun () ->
+      let save_box = GWindow.file_chooser_dialog
+        ~action:`SAVE
+        ~parent
+        ~title:"Export as SVG"
+        ~position:`MOUSE
+        () in
+      save_box#add_button_stock `CANCEL `CANCEL;
+      save_box#add_select_button "Export" `ACCEPT;
+      save_box#connect#response ==> (function
+        | `ACCEPT ->
+            begin match save_box#filename with
+            | Some fname -> export_as_svg v fname; save_box#destroy ()
+            | None -> () end;
+        | _ -> save_box#destroy ()
+      );
+      save_box#show ()
+    );
+    { menu; metrics_menu; metrics_items = [] }
+
+  let show t ~redraw v bev =
+    let packing = t.metrics_menu#add in
+    t.metrics_items |> List.iter (fun i -> i#destroy ());
+    t.metrics_items <- [];
+    let metrics = Mtv_view.vat v |> Mtv_thread.counters in
     metrics |> List.iter (fun metric ->
       let open Mtv_counter in
       let item = GMenu.check_menu_item ~packing ~label:metric.Mtv_counter.name ~active:metric.shown () in
       item#connect#activate ==> (fun () ->
         metric.shown <- not metric.shown;
-        GtkBase.Widget.queue_draw parent#as_widget
+        redraw ()
       );
+      t.metrics_items <- (item :> GObj.widget) :: t.metrics_items;
     );
-  );
-  let export_svg = GMenu.menu_item ~packing ~label:"Export as SVG..." () in
-  export_svg#connect#activate ==> (fun () ->
-    let save_box = GWindow.file_chooser_dialog
-      ~action:`SAVE
-      ~parent
-      ~title:"Export as SVG"
-      ~position:`MOUSE
-      () in
-    save_box#add_button_stock `CANCEL `CANCEL;
-    save_box#add_select_button "Export" `ACCEPT;
-    save_box#connect#response ==> (function
-      | `ACCEPT ->
-          begin match save_box#filename with
-          | Some fname -> export_as_svg v fname; save_box#destroy ()
-          | None -> () end;
-      | _ -> save_box#destroy ()
-    );
-    save_box#show ()
-  );
-  menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
-
-let ignore_widget : #GObj.widget -> unit = ignore
+    t.menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
+end
 
 let make source =
   let vat = Plugin.load source |> Mtv_thread.of_events in
@@ -98,6 +126,9 @@ let make source =
   let vadjustment = GData.adjustment () in
   let table = GPack.table ~rows:3 ~columns:2 ~homogeneous:false ~packing:win#add () in
   let area = GMisc.drawing_area ~packing:(table#attach ~left:0 ~top:0 ~expand:`BOTH ~fill:`BOTH) () in
+  let accel_group = GtkData.AccelGroup.create () in
+  let redraw () =
+    GtkBase.Widget.queue_draw area#as_widget in
 
   let _hscroll = GRange.scrollbar `HORIZONTAL ~adjustment:hadjustment ~packing:(table#attach ~left:0 ~top:1 ~expand:`X ~fill:`BOTH) () in
   let _vscroll = GRange.scrollbar `VERTICAL ~adjustment:vadjustment ~packing:(table#attach ~left:1 ~top:0 ~expand:`Y ~fill:`BOTH) () in
@@ -111,6 +142,7 @@ let make source =
   let search_entry = GEdit.entry ~packing:(minibuffer#pack ~expand:true) () in
 
   win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
+  win#add_accel_group accel_group;
   win#show ();
 
   let alloc = area#misc#allocation in
@@ -127,8 +159,13 @@ let make source =
         with Not_found -> false in
       Mtv_view.highlight_matches v query
     );
-    GtkBase.Widget.queue_draw area#as_widget
+    redraw ()
   );
+
+  let show_search () =
+    search_entry#set_text "";
+    minibuffer#misc#show ();
+    search_entry#misc#grab_focus () in
 
   win#event#connect#key_press ==> (fun kev ->
     let keyval = GdkEvent.Key.keyval kev in
@@ -136,13 +173,13 @@ let make source =
       (minibuffer#misc#hide (); true)
     else if minibuffer#misc#visible then false
     else match GdkEvent.Key.string kev with
-      | "/" ->
-          search_entry#set_text "";
-          minibuffer#misc#show ();
-          search_entry#misc#grab_focus ();
+      | "/" ->  (* Otherwise, it inserts a "/" into the box... *)
+          show_search ();
           true
       | _ -> false
   );
+
+  let menu = Menu.make ~accel_group ~parent:win ~show_search ~v in
 
   let set_scollbars () =
     let (xlo, xhi, xsize, xvalue), (ylo, yhi, ysize, yvalue) = Mtv_view.scroll_bounds v in
@@ -186,13 +223,13 @@ let make source =
   area#event#connect#scroll ==> (fun ev ->
     let x = GdkEvent.Scroll.x ev in
     let t_at_pointer = Mtv_view.time_of_x v x in
-    let redraw () =
+    let redraw_zoomed () =
       let t_new_at_pointer = Mtv_view.time_of_x v x in
       set_start_time (Mtv_view.view_start_time v -. (t_new_at_pointer -. t_at_pointer));
-      GtkBase.Widget.queue_draw area#as_widget in
+      redraw () in
     begin match GdkEvent.Scroll.direction ev with
-    | `UP -> Mtv_view.zoom v 1.2; set_scollbars (); redraw ()
-    | `DOWN -> Mtv_view.zoom v (1. /. 1.2); redraw (); set_scollbars ()
+    | `UP -> Mtv_view.zoom v 1.2; set_scollbars (); redraw_zoomed ()
+    | `DOWN -> Mtv_view.zoom v (1. /. 1.2); redraw_zoomed (); set_scollbars ()
     | _ -> () end;
     true
   );
@@ -212,7 +249,7 @@ let make source =
             Mtv_view.highlight_related v thread;
             GtkBase.Widget.queue_draw area#as_widget;
             Mtv_thread.dump thread; true end
-    | `BUTTON_PRESS, 3 -> show_menu ~parent:win ~v ev; true
+    | `BUTTON_PRESS, 3 -> Menu.show menu ~redraw v ev; true
     | _ -> false
   );
 

@@ -400,44 +400,46 @@ module Make (C : CANVAS) = struct
       C.stroke cr;
     );
 
-    let stat_labels = ref [] in
-    Mtv_thread.counters vat |> List.iteri (fun counter_i counter ->
-      let open Mtv_counter in
-      if counter.shown then (
-        let range = counter.scale.max -. counter.scale.min in
-        let v_scale = (Mtv_view.view_height v -. (2.0 *. counter_line_width)) /. range in
-        let v_offset = Mtv_view.view_height v +. (v_scale *. counter.scale.min) -. counter_line_width in
-        let y_of_value value = v_offset -. v_scale *. value in
+    if Mtv_view.show_metrics v then (
+      let stat_labels = ref [] in
+      Mtv_thread.counters vat |> List.iteri (fun counter_i counter ->
+        let open Mtv_counter in
+        if counter.shown then (
+          let range = counter.scale.max -. counter.scale.min in
+          let v_scale = (Mtv_view.view_height v -. (2.0 *. counter_line_width)) /. range in
+          let v_offset = Mtv_view.view_height v +. (v_scale *. counter.scale.min) -. counter_line_width in
+          let y_of_value value = v_offset -. v_scale *. value in
 
-        let values = counter.values in
-        let i = Mtv_sorted_array.count_before (fun (time, _v) -> time >= Mtv_view.view_start_time v) values in
-        let first_visible = max (i - 1) 0 in
-        let first_value =
-          if i = 0 then 0.0
-          else (snd values.(first_visible)) in
-        let y = ref (y_of_value first_value) in
-        C.move_to cr ~x:0.0 ~y:!y;
-        begin try
-          for i = first_visible to Array.length values - 1 do
-            let time, value = Array.get values i in
-            let x = Mtv_view.clip_x_of_time v time in
-            C.line_to cr ~x ~y:!y;
-            if x > Mtv_view.view_width v then raise Exit;
-            let new_y = y_of_value value in
-            C.line_to cr ~x ~y:new_y;
-            y := new_y;
-          done
-        with Exit -> () end;
-        C.line_to cr ~x:(Mtv_view.view_width v) ~y:!y;
-        counter_shadow cr;
-        C.stroke_preserve cr;
-        counter_line counter_i cr;
-        C.stroke cr;
+          let values = counter.values in
+          let i = Mtv_sorted_array.count_before (fun (time, _v) -> time >= Mtv_view.view_start_time v) values in
+          let first_visible = max (i - 1) 0 in
+          let first_value =
+            if i = 0 then 0.0
+            else (snd values.(first_visible)) in
+          let y = ref (y_of_value first_value) in
+          C.move_to cr ~x:0.0 ~y:!y;
+          begin try
+            for i = first_visible to Array.length values - 1 do
+              let time, value = Array.get values i in
+              let x = Mtv_view.clip_x_of_time v time in
+              C.line_to cr ~x ~y:!y;
+              if x > Mtv_view.view_width v then raise Exit;
+              let new_y = y_of_value value in
+              C.line_to cr ~x ~y:new_y;
+              y := new_y;
+            done
+          with Exit -> () end;
+          C.line_to cr ~x:(Mtv_view.view_width v) ~y:!y;
+          counter_shadow cr;
+          C.stroke_preserve cr;
+          counter_line counter_i cr;
+          C.stroke cr;
 
-        let y = insert_label (max 16. (!y -. 2.)) stat_labels in
-        let max_x = Mtv_view.view_width v in
-        draw_label cr ~v ~y ~min_x:0.0 ~max_x max_x counter.name |> ignore
-      )
+          let y = insert_label (max 16. (!y -. 2.)) stat_labels in
+          let max_x = Mtv_view.view_width v in
+          draw_label cr ~v ~y ~min_x:0.0 ~max_x max_x counter.name |> ignore
+        )
+      );
     );
 
     (* Draw these on top of everything else so they can still be seen *)
