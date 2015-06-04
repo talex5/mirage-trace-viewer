@@ -339,7 +339,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   resize_callbacks := resize :: !resize_callbacks;
   resize ()
 
-let load ?file ?range name =
+let load ?file ?metrics ?range name =
   let file =
     match file with
     | Some file -> file
@@ -353,6 +353,13 @@ let load ?file ?range name =
       let scale = (Mtv_view.view_width v -. Mtv_view.h_margin *. 2.) /. (t_max -. t_min) in
       Mtv_view.set_scale v scale;
       Mtv_view.set_start_time v t_min |> ignore end;
+  begin match metrics with
+  | None -> ()
+  | Some metrics ->
+      Mtv_view.vat v |> Mtv_thread.counters |> List.iter (fun counter ->
+        counter.Mtv_counter.shown <- List.mem counter.Mtv_counter.name metrics;
+      );
+  end;
   match Dom_html.tagged (Dom_html.getElementById name) with
   | Dom_html.Canvas c -> attach c v
   | _ -> failwith (Printf.sprintf "Canvas element '%s' not found in DOM" name)
