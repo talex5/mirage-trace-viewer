@@ -136,6 +136,15 @@ let rec ensure_resolved ~top_thread th =
   | None -> ()
   | Some th -> ensure_resolved ~top_thread th
 
+(* Sometimes it's useful to show several counters on the same scale.
+ * Ideally, this information would come from the trace, but for now we just hard-code them. *)
+let scale_for = function
+  | "tcp-ackd-segs" -> "tcp-to-ip"
+  | counter ->
+      (* Show e.g. buflen#1 and buflen#2 on the same scale *)
+      try let i = String.rindex counter '#' in String.sub counter 0 i
+      with Not_found -> counter
+
 let of_events ?(simplify=true) events =
   let trace_start_time =
     match events with
@@ -146,7 +155,23 @@ let of_events ?(simplify=true) events =
 
   let vat = {top_thread; gc = []; counters = []} in
 
-  let counters = Hashtbl.create 2 in
+  let scales = Hashtbl.create 20 in
+  (* Get or update the scale for a new counter *)
+  let get_scale_for ~min:low ~max:high counter_name =
+    let open Mtv_counter in
+    let low = min low 0.0 in    (* For now, assume every scale should go down to zero at least. *)
+    let scale_name = scale_for counter_name in
+    try
+      let scale = Hashtbl.find scales scale_name in
+      scale.min <- min scale.min low;
+      scale.max <- max scale.max high;
+      scale
+    with Not_found ->
+      let s = { min = low; max = high } in
+      Hashtbl.add scales scale_name s;
+      s in
+
+  let counters = Hashtbl.create 20 in
   let get_counter name =
     try Hashtbl.find counters name
     with Not_found ->
@@ -290,11 +315,11 @@ let of_events ?(simplify=true) events =
       low := min !low v;
       high := max !high v;
     );
+    let scale = get_scale_for name ~min:!low ~max:!high in
     let counter = { Mtv_counter.
       name;
       values;
-      min = !low;
-      max = !high;
+      scale;
       shown = true;
     } in
     vat.counters <- counter :: vat.counters

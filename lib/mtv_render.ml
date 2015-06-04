@@ -404,9 +404,9 @@ module Make (C : CANVAS) = struct
     Mtv_thread.counters vat |> List.iteri (fun counter_i counter ->
       let open Mtv_counter in
       if counter.shown then (
-        let range = counter.max -. counter.min in
+        let range = counter.scale.max -. counter.scale.min in
         let v_scale = (Mtv_view.view_height v -. (2.0 *. counter_line_width)) /. range in
-        let v_offset = Mtv_view.view_height v +. (v_scale *. counter.min) -. counter_line_width in
+        let v_offset = Mtv_view.view_height v +. (v_scale *. counter.scale.min) -. counter_line_width in
         let y_of_value value = v_offset -. v_scale *. value in
 
         let values = counter.values in
