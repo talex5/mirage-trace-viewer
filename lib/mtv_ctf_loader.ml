@@ -160,6 +160,11 @@ let from_bigarray stream_data =
               let reader = read_thread () in
               let input = read_thread () in
               Reads (reader, input, Read_sleeping)
+          | 11 ->
+              let thread = read_thread () in
+              let value = read64 () |> Int64.to_int in
+              let counter = read_string () in
+              Counter_value (thread, counter, value)
           | x -> error "Unknown event op %d" x in
         let event = {
           time = Int64.to_float time /. 1_000_000_000.;

@@ -253,6 +253,12 @@ let of_events ?(simplify=true) events =
         c.mc_values <- (time, new_value) :: c.mc_values;
         let a = get_thread a in
         a.labels <- (time, Printf.sprintf "%s%+d" counter amount) :: a.labels
+    | Counter_value (a, counter, new_value) ->
+        let c = get_counter counter in
+        let amount = new_value - counter_value c in
+        c.mc_values <- (time, new_value) :: c.mc_values;
+        let a = get_thread a in
+        a.labels <- (time, Printf.sprintf "%s%+d" counter amount) :: a.labels
   );
   switch top_thread.end_time None;
   (* Check that every should-resolve thread did eventually resolve. *)
