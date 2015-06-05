@@ -33,8 +33,8 @@ Library "js"
   Install$:       flag(javascript)
   FindlibParent:  mirage-trace-viewer
   FindlibName:    js
-  Modules:        Html_viewer
-  BuildDepends:   mirage-trace-viewer,js_of_ocaml,js_of_ocaml.syntax
+  Modules:        Html_viewer, Modal
+  BuildDepends:   mirage-trace-viewer,js_of_ocaml,js_of_ocaml.syntax,js_of_ocaml.tyxml
   
 Library "main"
   Path:           main

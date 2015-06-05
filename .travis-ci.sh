@@ -19,7 +19,7 @@ opam init git://github.com/ocaml/opam-repository
 eval `opam config env`
 opam update
 sudo apt-get install libxen-dev libgtk2.0-dev
-opam install ocamlfind itv-tree ocplib-endian cmdliner js_of_ocaml xen-gnt xenstore_transport lablgtk cairo2 mirage-profile
+opam install ocamlfind itv-tree ocplib-endian cmdliner js_of_ocaml xen-gnt xenstore_transport lablgtk cairo2 mirage-profile tyxml react reactiveData
 
 ./configure --prefix=`opam config var prefix`
 make

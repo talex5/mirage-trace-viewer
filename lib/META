@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 88621946893bd7fef69994d6915ed60d)
+# DO NOT EDIT (digest: 79e846e38b812f5d50749957ca9dcf24)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
 requires = "itv-tree ocplib-endian.bigstring cmdliner"
@@ -22,7 +22,8 @@ package "xen" (
 package "js" (
  version = "0.1"
  description = "Graphical viewer of Lwt trace logs"
- requires = "mirage-trace-viewer js_of_ocaml js_of_ocaml.syntax"
+ requires =
+ "mirage-trace-viewer js_of_ocaml js_of_ocaml.syntax js_of_ocaml.tyxml"
  archive(byte) = "js.cma"
  archive(byte, plugin) = "js.cma"
  archive(native) = "js.cmxa"

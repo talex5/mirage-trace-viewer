@@ -59,12 +59,23 @@ let html : (_, _, _) format = "\
   <style type='text/css'>\n\
     body { margin: 0; padding: 0; border: 0; }\n\
     canvas { position: absolute; left: 0; top: 0; }\n\
+    div.side-panel {\n\
+      z-index: 80;\n\
+      margin: 0;\n\
+      padding: 0;\n\
+      border-right: 1px solid black;\n\
+      position: absolute; left: 0; top: 0; height: 100%%; background: rgba(220, 220, 220, 0.9)\n\
+    }\n\
+    div.side-panel > div {\n\
+      margin: 0.5em;\n\
+    }\n\
   </style>\n\
   <title>Mirage Trace Toolkit</title>\n\
 </head>\n\
 <body>\n\
   <canvas id='%s' style='width: 100%%; height:100%%'>\n\
   <noscript>Sorry, you need to enable JavaScript to see this page.</noscript>\n\
+  </canvas>\n\
 </body>\n\
 </html>"
 

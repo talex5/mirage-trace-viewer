@@ -1,5 +1,12 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+let auto_focus input =
+  Lwt_js_events.async (fun () ->
+    let elem = Tyxml_js.To_dom.of_input input in
+    elem##select ();
+    Lwt.return ()
+  )
+
 module Canvas = struct
   type context = Dom_html.canvasRenderingContext2D Js.t
 
@@ -73,6 +80,12 @@ end
 
 module R = Mtv_render.Make(Canvas)
 
+let modal =
+  let body = Dom_html.document##body in
+  let div = Dom_html.createDiv Dom_html.document in
+  body##insertBefore ((div :> Dom.node Js.t), body##firstChild) |> ignore;
+  div
+
 type touch =
   | Touch_none
   | Touch_drag of (Mtv_thread.time * float)
@@ -97,12 +110,12 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   let hscroll_values () =
     let (xlo, xhi, xsize, xvalue), _y = Mtv_view.scroll_bounds v in
     let range = xhi -. xlo in
-    let well_width = Mtv_view.view_width v -. 64. in
+    let well_width = Mtv_view.view_width v -. 96. in
     let xsize = (xsize /. range) *. well_width in
     let xsize, well_width =
       if xsize < 16. then (16., well_width -. (16. -. xsize))
       else (xsize, well_width) in
-    let xstart = ((xvalue -. xlo) /. range) *. well_width +. 64. in
+    let xstart = ((xvalue -. xlo) /. range) *. well_width +. 96. in
     (xsize, well_width, xstart) in
 
   let draw_controls ctx =
@@ -111,13 +124,23 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ctx##rect (0.0, top, Mtv_view.view_width v, control_height);
     ctx##fill ();
     ctx##beginPath ();
+    (* Zoom *)
     ctx##strokeStyle <- Js.string "#fff";
-    ctx##moveTo (2.0, top +. control_height /. 2.);
-    ctx##lineTo (30.0, top +. control_height /. 2.);
     ctx##moveTo (34.0, top +. control_height /. 2.);
     ctx##lineTo (62.0, top +. control_height /. 2.);
-    ctx##moveTo (48.0, top);
-    ctx##lineTo (48.0, Mtv_view.view_height v +. control_height);
+    ctx##moveTo (66.0, top +. control_height /. 2.);
+    ctx##lineTo (94.0, top +. control_height /. 2.);
+    ctx##moveTo (80.0, top);
+    ctx##lineTo (80.0, Mtv_view.view_height v +. control_height);
+    ctx##stroke ();
+    ctx##beginPath ();
+    (* Hamburger *)
+    let spacing = control_height /. 4.0 in
+    for i = 1 to 3 do
+      let y = top +. spacing *. float_of_int i in
+      ctx##moveTo (2.0, y);
+      ctx##lineTo (30.0, y);
+    done;
     ctx##stroke ();
     ctx##beginPath ();
     (* Scrollbar *)
@@ -125,7 +148,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ctx##fillStyle <- Js.string "#fff";
     ctx##rect (xstart, top, xsize, control_height);
     ctx##fill ();
-    ctx##beginPath ();
+    ctx##beginPath ()
     in
 
   let render_queued = ref false in
@@ -170,10 +193,60 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     cancel_mouse_timeouts ();
     mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 500.0)) in
 
+  let show_side_panel () =
+    let open Tyxml_js.Html5 in
+    let input = Tyxml_js.Html5.input in
+    let search ev =
+      Js.Opt.iter (ev##target) (fun entry ->
+        Js.Opt.iter (Dom_html.CoerceTo.input entry) (fun entry ->
+          begin match entry##value |> Js.to_string with
+          | "" -> Mtv_view.(set_highlights v ThreadSet.empty)
+          | text ->
+              let re = Regexp.regexp_string_case_fold text in
+              let query label =
+                Regexp.search_forward re label 0 <> None in
+              Mtv_view.highlight_matches v query end;
+          render ()
+        )
+      );
+      true in
+    let keyup ev =
+      if ev##keyCode = 13 then Modal.close ();
+      true in
+    let search_box = input ~a:[a_placeholder "Search"; a_name "search"; a_onkeyup keyup; a_oninput search] () in
+    auto_focus search_box;
+    let show_metrics_attrs =
+      if Mtv_view.show_metrics v then [a_checked `Checked] else [] in
+    let set_show_metrics _ev =
+      Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
+      render ();
+      false in
+    let elem = (
+      div ~a:[a_class ["side-panel"]] [
+        div [
+          div [search_box];
+          hr ();
+          div [
+            label [
+              input ~a:(a_input_type `Checkbox :: a_name "show_metrics" :: a_onchange set_show_metrics :: show_metrics_attrs) ();
+              pcdata "Show metrics"];
+          ];
+          hr ();
+          button ~a:[a_onclick (fun _ev -> Modal.close (); false)] [pcdata "Close"]
+        ]
+      ]
+    ) in
+    let node = modal##appendChild (Tyxml_js.To_dom.of_node elem) in
+    let close () =
+      modal##removeChild (node) |> ignore in
+    Modal.show ~close modal in
+
   let control_click ~x =
     if x < 32. then (
-      button_zoom (1. /. 1.2);
+      show_side_panel ();
     ) else if x < 64. then (
+      button_zoom (1. /. 1.2);
+    ) else if x < 96. then (
       button_zoom 1.2;
     ) else (
       let top_thread = Mtv_thread.top_thread (Mtv_view.vat v) in
@@ -181,7 +254,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
       let scroll_to_x x =
         let xsize, well_width, _ = hscroll_values () in
         let x = x -. xsize /. 2. in
-        let frac = (x -. 64.) /. well_width in
+        let frac = (x -. 96.) /. well_width in
         Mtv_view.set_start_time v (Mtv_thread.start_time top_thread +. time_range *. frac) |> ignore;
         Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore in
 
