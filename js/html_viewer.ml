@@ -221,6 +221,20 @@ let attach (c:Dom_html.canvasElement Js.t) v =
       Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
       render ();
       false in
+    let metric_toggles =
+      Mtv_view.vat v |> Mtv_thread.counters |> List.map (fun c ->
+        let checked = if c.Mtv_counter.shown then [a_checked `Checked] else [] in
+        let toggle_metric _ev =
+          Mtv_counter.(c.shown <- not c.shown);
+          render ();
+          false in
+        li [
+          label [
+            input ~a:(a_input_type `Checkbox :: a_onchange toggle_metric :: checked) ();
+            pcdata c.Mtv_counter.name
+          ]
+        ]
+      ) in
     let elem = (
       div ~a:[a_class ["side-panel"]] [
         div [
@@ -231,6 +245,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
               input ~a:(a_input_type `Checkbox :: a_name "show_metrics" :: a_onchange set_show_metrics :: show_metrics_attrs) ();
               pcdata "Show metrics"];
           ];
+          ul ~a:[a_class ["metrics"]] metric_toggles;
           hr ();
           button ~a:[a_onclick (fun _ev -> Modal.close (); false)] [pcdata "Close"]
         ]

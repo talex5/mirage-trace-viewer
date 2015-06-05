@@ -64,10 +64,18 @@ let html : (_, _, _) format = "\
       margin: 0;\n\
       padding: 0;\n\
       border-right: 1px solid black;\n\
-      position: absolute; left: 0; top: 0; height: 100%%; background: rgba(220, 220, 220, 0.9)\n\
+      position: absolute; left: 0; top: 0; height: 100%%; background: rgba(220, 220, 220, 0.9);\n\
+      display: flex;\n\
     }\n\
     div.side-panel > div {\n\
       margin: 0.5em;\n\
+      display: flex;\n\
+      flex-direction: column;\n\
+    }\n\
+    ul.metrics {\n\
+      list-style: none;\n\
+      padding-left: 0;\n\
+      overflow-y: scroll;\n\
     }\n\
   </style>\n\
   <title>Mirage Trace Toolkit</title>\n\
