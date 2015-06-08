@@ -24,6 +24,11 @@ for it.</description>
 	<manifest-digest sha256new="NKDNFAJU6WTUHX3K57RN57BLRSWJCPVYZW66DMYGO7QLPB3ZYCKA"/>
 	<archive extract="mirage-trace-viewer-0.1" href="https://github.com/talex5/mirage-trace-viewer/archive/v0.1.tar.gz" size="139553"/>
       </implementation>
+
+      <implementation arch="*-src" compile:dup-src="true" id="sha1new=092d0b1b6a382dc2e97dea1080db70cc8032d7e5" released="2015-06-08" version="0.2">
+	<manifest-digest sha256new="WQOANYYMXFPKPJVPDUGHX6GLQDUFGNAWTMEZKV6LKLLBKRSBBHNQ"/>
+	<archive extract="mirage-trace-viewer-0.2" href="https://github.com/talex5/mirage-trace-viewer/archive/0.2.tar.gz" size="145627"/>
+      </implementation>
     </group>
 
     <group arch="Linux-armv7l">
@@ -44,11 +49,11 @@ for it.</description>
   </group>
 </interface>
 <!-- Base64 Signature
-iQEcBAABCgAGBQJUiwJfAAoJEAcTP5bKdNi6UToIAJR+KD2M/nMFiFwIup7rs/gvveWARFpfehBt
-xSZph5yLAGpEuyjBGqglvseeB9MfuVDjZy+VpiVBPKl80sHV9qjvP4a8u2XklRr2NEg3uRL3eqrv
-RasAPjbdTiL7fSSsRXSxAOJguvGY7F2KkFlcqfs48tNpBVLlkjoJAEReQ1dCDxFvCqxOmra3a7Kq
-oFF/dTA0o9xlxrSqwvTeRHGKx4W6VxNMFm6zZnRfmjsfl+nZv4Qj3fX+xd7rXmmozD6kgpJ7ilav
-vrF9AcBWdxPFHR88e8NNu5nVGCUOfV0Ws8q1xMSBVi6bXKaFCmneUAzHzoAn5OOt3e3TGbkEsVKb
-UbU=
+iQEcBAABCAAGBQJVdWlRAAoJEAcTP5bKdNi6vLUH/02lBypms0TEA79VJ3RyWLJ3j9i6b0bbWkco
++xEUE6jXf1ViGpGe8Mb3AxAVbweWLVSdUIC6BkflcgT5sFwS3mArxtgif6Ixcns0Y0KTiVS7LLPo
+4ENN60REQ88d5aWIxN3/izvfEV9SVDJbw4YXf6zC4wW9z01skz6kK99f4v+P0KdiYo4RcXc6DYh7
+DAsPbwQjnjd6VAW28zRKvC032koMtymrEGJnwhDXOaymhS6QcnkewVPW6NHRD4tzK80EXOvaRofl
+ti90pBnAIi1cPjKzZoiCExzhpvBYmbzJYFyHPRuWgcn9v+drR3297hXVvaXGp/CUM+g7n401HwK0
+dZQ=
 
 -->
