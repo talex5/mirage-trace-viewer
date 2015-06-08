@@ -65,3 +65,6 @@ let () =
     | _ -> Js._true in
   Dom_html.addEventListener Dom_html.document Dom_html.Event.click (Dom.handler click) Js._true |> ignore_listener;
   Dom_html.addEventListener Dom_html.document Dom_html.Event.keypress (Dom.handler keyup) Js._true |> ignore_listener
+
+let is_open () =
+  !current <> None

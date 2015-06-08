@@ -11,3 +11,5 @@ val show : close:(unit -> unit) -> #Dom_html.element Js.t -> unit
 
 val close : unit -> unit
 (** Close any currently open modal. *)
+
+val is_open : unit -> bool

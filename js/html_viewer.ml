@@ -7,6 +7,9 @@ let auto_focus input =
     Lwt.return ()
   )
 
+let focus elem =
+  (Js.Unsafe.coerce elem)##focus ()
+
 module Canvas = struct
   type context = Dom_html.canvasRenderingContext2D Js.t
 
@@ -253,7 +256,8 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     ) in
     let node = modal##appendChild (Tyxml_js.To_dom.of_node elem) in
     let close () =
-      modal##removeChild (node) |> ignore in
+      modal##removeChild (node) |> ignore;
+      focus c in
     Modal.show ~close modal in
 
   let control_click ~x =
@@ -316,6 +320,7 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let mouse_down (ev:Dom_html.mouseEvent Js.t) =
+    focus c;
     let (x, y) = rel_event_coords ev in
     if y >= Mtv_view.view_height v then control_click ~x
     else (
@@ -411,6 +416,18 @@ let attach (c:Dom_html.canvasElement Js.t) v =
     end;
     Js._false in
 
+  let key_press ev =
+    if Modal.is_open () then Js._true
+    else match Js.Optdef.map ev##charCode Char.chr |> Js.Optdef.to_option with
+    | Some ' ' ->
+        Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
+        render ();
+        Js._false
+    | Some '/' ->
+        show_side_panel ();
+        Js._false
+    | _ -> Js._true in
+
   Dom_html.addMousewheelEventListener c zoom (Js.bool true) |> ignore;
   c##ondblclick <- Dom_html.handler double_click;
   c##onmousedown <- Dom_html.handler mouse_down;
@@ -421,6 +438,9 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   Dom_html.addEventListener c Dom_html.Event.touchmove (Dom_html.handler touch_move) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchend (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchcancel (Dom_html.handler touch_change) (Js.bool true) |> ignore;
+  Dom_html.addEventListener c Dom_html.Event.keypress (Dom_html.handler key_press) (Js.bool true) |> ignore;
+
+  focus c;
 
   let resize_false _ = resize (); Js._false in
   Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize_false) (Js.bool true) |> ignore;

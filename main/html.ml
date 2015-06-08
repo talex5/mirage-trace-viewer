@@ -81,7 +81,7 @@ let html : (_, _, _) format = "\
   <title>Mirage Trace Toolkit</title>\n\
 </head>\n\
 <body>\n\
-  <canvas id='%s' style='width: 100%%; height:100%%'>\n\
+  <canvas id='%s' style='width: 100%%; height:100%%' tabindex='1'>\n\
   <noscript>Sorry, you need to enable JavaScript to see this page.</noscript>\n\
   </canvas>\n\
 </body>\n\
