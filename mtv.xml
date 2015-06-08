@@ -32,10 +32,14 @@ for it.</description>
     </group>
 
     <group arch="Linux-armv7l">
+      <command name="run" path="bin/mirage-trace-viewer"/>
       <implementation id="sha1new=d6062559bba21073b7ab54314206cc0460fa609a" released="2014-12-12" version="0.1">
-	<command name="run" path="bin/mirage-trace-viewer"/>
 	<manifest-digest sha256new="SFCMBF4AXIEDAXA3DUZO66HPAAAZBPO4XLRCNSRM6IV45WW72W4A"/>
 	<archive extract="mirage-trace-viewer-linux-armv7l-0.1" href="https://github.com/talex5/mirage-trace-viewer/releases/download/v0.1/mirage-trace-viewer-linux-armv7l-0.1.tar.bz2" size="1528823"/>
+      </implementation>
+      <implementation id="sha1new=325e12eb40e0ddef709bdea2dbf1f22c44a1a2c2" released="2015-06-08" version="0.2">
+	<manifest-digest sha256new="THBPZNKOA247MMHHACPBI4JIDJYPP6VIZXKJOMAPX7OQFU5ADYFQ"/>
+	<archive extract="mirage-trace-viewer-linux-armv7l-0.2" href="https://github.com/talex5/mirage-trace-viewer/releases/download/0.2/mirage-trace-viewer-linux-armv7l-0.2.tar.bz2" size="1713641"/>
       </implementation>
     </group>
 
@@ -53,11 +57,11 @@ for it.</description>
   </group>
 </interface>
 <!-- Base64 Signature
-iQEcBAABCAAGBQJVdXFWAAoJEAcTP5bKdNi6bu4IAKZJRlmjVf9xgt5YeOAMYLX6YEh7KZa0e3/r
-uxeVUGjQNnfsDzBqFhn0r+PhsdlZisuMl93/hLpNR1nNTepdWkbwjfIJuI6AB62iHqgQQjGnfV3M
-aStqsniyjagPPwjOueWqvD7BAd3SToWJca1keOwJjcEr3iZk3UO2vYUlZ9bTSerRcqXCzs3G9xJU
-btdN5oKsiCAdFxaYvr+R2SZcpVMAX6zameqZlEVrvTTzfvAcv5Ko8ko+/5hru0VoBTdIHiA3zyvy
-cqAMy5jECudFZVAgoNxwqPPuqPt0aV7U0kgKG/9XaO6M94zhcPzaLdb4bXfS8IYrof6ghETVpY+t
-1pM=
+iQEcBAABCAAGBQJVdXyGAAoJEAcTP5bKdNi6oQEH/2IXLJ3ydMXdDmjGN4mQne2RoRmmXGv4rBAB
+Ew+lz67LFv2ZM5XKv8KI/J+UVd5OMdSA9vEItaqhwlr1OkgviZzt7388JBgr3IyoSo7o3egHjsal
+c/F48vECASuRGAdIyxiebJPV8uA6pLAMrrMj4bzvY6eNw2qA3OehBRF+fd9iNtX5qdVUD6jt40Ut
+aeuxqOi8Ao3nMV5JCZhnIVuVlhA/l5PQhUsyEa+arNS3xhQzuJcvVLsEMhiL4yh9Sqx9Jv+fsSJm
+enICfr7Y1rmGlCeBy1KM9NQLiC+W5HndekPN1b5Me9+A5MzlEl0M44lWGcIAyk569KrYEH53b4S0
+eEc=
 
 -->
