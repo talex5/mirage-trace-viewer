@@ -83,12 +83,6 @@ end
 
 module R = Mtv_render.Make(Canvas)
 
-let modal =
-  let body = Dom_html.document##body in
-  let div = Dom_html.createDiv Dom_html.document in
-  body##insertBefore ((div :> Dom.node Js.t), body##firstChild) |> ignore;
-  div
-
 type touch =
   | Touch_none
   | Touch_drag of (Mtv_thread.time * float)
@@ -103,6 +97,12 @@ let control_height = 16.
 
 (** Connect callbacks to render view [v] on canvas [c]. *)
 let attach (c:Dom_html.canvasElement Js.t) v =
+  let modal =
+    let div = Dom_html.createDiv Dom_html.document in
+    Js.Opt.iter (c##parentNode) (fun parent ->
+      parent##insertBefore ((div :> Dom.node Js.t), Js.Opt.return (c :> Dom.node Js.t)) |> ignore
+    );
+    div in
   let rel_event_coords ev =
     let (cx, cy) = Dom_html.elementClientPosition c in
     (float_of_int (ev##clientX - cx), float_of_int (ev##clientY - cy)) in
