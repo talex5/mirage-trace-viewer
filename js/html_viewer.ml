@@ -96,7 +96,7 @@ let () =
 let control_height = 16.
 
 (** Connect callbacks to render view [v] on canvas [c]. *)
-let attach (c:Dom_html.canvasElement Js.t) v =
+let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
   let modal =
     let div = Dom_html.createDiv Dom_html.document in
     Js.Opt.iter (c##parentNode) (fun parent ->
@@ -440,14 +440,14 @@ let attach (c:Dom_html.canvasElement Js.t) v =
   Dom_html.addEventListener c Dom_html.Event.touchcancel (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.keypress (Dom_html.handler key_press) (Js.bool true) |> ignore;
 
-  focus c;
+  if grab_focus then focus c;
 
   let resize_false _ = resize (); Js._false in
   Dom_html.addEventListener Dom_html.window Dom_html.Event.resize (Dom_html.handler resize_false) (Js.bool true) |> ignore;
   resize_callbacks := resize :: !resize_callbacks;
   resize ()
 
-let load ?file ?metrics ?range name =
+let load ?grab_focus ?file ?metrics ?range name =
   let file =
     match file with
     | Some file -> file
@@ -468,6 +468,9 @@ let load ?file ?metrics ?range name =
         counter.Mtv_counter.shown <- List.mem counter.Mtv_counter.name metrics;
       );
   end;
-  match Dom_html.tagged (Dom_html.getElementById name) with
-  | Dom_html.Canvas c -> attach c v
-  | _ -> failwith (Printf.sprintf "Canvas element '%s' not found in DOM" name)
+  try
+    match Dom_html.tagged (Dom_html.getElementById name) with
+    | Dom_html.Canvas c -> attach ?grab_focus c v
+    | _ -> raise Not_found
+  with Not_found ->
+    failwith (Printf.sprintf "Canvas element '%s' not found in DOM" name)

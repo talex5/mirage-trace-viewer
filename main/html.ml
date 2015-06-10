@@ -98,7 +98,7 @@ let write_to dir sources =
   else (
     let loads = ref [] in
     let bin_args = sources
-      |> List.map (fun source ->
+      |> List.mapi (fun i source ->
         let vat = Plugin.load source |> Mtv_thread.of_events in
         let name = Filename.basename source.Plugin.name in
         let v = Mtv_view.make ~vat ~view_width:640. ~view_height:480. in
@@ -106,7 +106,9 @@ let write_to dir sources =
         let ch = open_out (dir / bin_file) in
         Marshal.to_channel ch v [];
         close_out ch;
-        loads := Printf.sprintf "Html_viewer.load %S;" name :: !loads;
+        let focus =
+          if i = 0 then "~grab_focus:true " else "" in
+        loads := Printf.sprintf "Html_viewer.load %s%S;" focus name :: !loads;
         ["--file"; String.escaped bin_file]
       )
       |> List.concat in
