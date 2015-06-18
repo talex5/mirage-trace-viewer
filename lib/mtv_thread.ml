@@ -160,7 +160,7 @@ let of_events ?(simplify=true) events =
   let get_scale_for ~min:low ~max:high counter_name =
     let open Mtv_counter in
     let low = min low 0.0 in    (* For now, assume every scale should go down to zero at least. *)
-    let high = if high <= low then low +. 1.0 else high in
+    let high = max high (low +. 10.0) in
     let scale_name = scale_for counter_name in
     try
       let scale = Hashtbl.find scales scale_name in
