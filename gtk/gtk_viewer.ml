@@ -118,7 +118,10 @@ end
 let make source =
   let vat = Plugin.load source |> Mtv_thread.of_events in
   let top_thread = Mtv_thread.top_thread vat in
-  let win = GWindow.window ~title:"Mirage Trace Toolkit" () in
+  let title = Printf.sprintf "%s (%s) - Mirage Trace Viewer"
+    (Filename.basename source.Plugin.name)
+    (Filename.dirname source.Plugin.name) in
+  let win = GWindow.window ~title () in
   win#set_default_size
     ~width:(Gdk.Screen.width () / 2)
     ~height:(Gdk.Screen.height () / 2);
