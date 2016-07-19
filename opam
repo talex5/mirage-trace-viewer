@@ -22,7 +22,7 @@ depends: [
   "ocplib-endian"
   "cmdliner"
   "js_of_ocaml"
-  "tyxml"
+  "tyxml" {>= "4.0.0"}
   "react"
   "reactiveData"
   "xen-gnt"

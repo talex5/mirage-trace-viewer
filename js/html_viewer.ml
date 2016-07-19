@@ -219,14 +219,14 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     let search_box = input ~a:[a_placeholder "Search"; a_name "search"; a_onkeyup keyup; a_oninput search] () in
     auto_focus search_box;
     let show_metrics_attrs =
-      if Mtv_view.show_metrics v then [a_checked `Checked] else [] in
+      if Mtv_view.show_metrics v then [a_checked ()] else [] in
     let set_show_metrics _ev =
       Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
       render ();
       false in
     let metric_toggles =
       Mtv_view.vat v |> Mtv_thread.counters |> List.map (fun c ->
-        let checked = if c.Mtv_counter.shown then [a_checked `Checked] else [] in
+        let checked = if c.Mtv_counter.shown then [a_checked ()] else [] in
         let toggle_metric _ev =
           Mtv_counter.(c.shown <- not c.shown);
           render ();
