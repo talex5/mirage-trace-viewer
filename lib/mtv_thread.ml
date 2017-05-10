@@ -180,10 +180,11 @@ let of_events ?(simplify=true) events =
       Hashtbl.add counters name c;
       c in
 
-  let rec replacement thread =
+  let rec replacement ?(tries=1000) thread =
     match thread.becomes with
     | None -> thread
-    | Some t2 -> replacement t2 in
+    | Some _ when tries = 0 -> print_endline "Become loop!"; thread
+    | Some t2 -> replacement ~tries:(tries - 1) t2 in
 
   let threads = Hashtbl.create 100 in
   Hashtbl.add threads (-1) top_thread;
