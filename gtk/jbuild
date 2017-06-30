@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name        mirage_trace_viewer_gtk)
+  (public_name mirage-trace-viewer.gtk)
+  (wrapped     false)
+  (libraries   (lablgtk2 cairo2.lablgtk2 cairo2 mirage_trace_viewer mirage_trace_viewer_plugin))
+))

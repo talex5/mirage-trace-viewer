@@ -76,7 +76,7 @@ let trace_files =
   Arg.(value @@ pos_all input_file [] @@ info ~doc ~docv:"TRACE-FILE" [])
 
 let view_with_gtk source =
-  match Plugin.load_output_plugin "gtk/mtv-gtk-plugin.cma" with
+  match Plugin.load_output_plugin "gtk/mirage_trace_viewer_gtk.cma" with
   | `Error msg -> `Error (false, msg)
   | `Ok gtk ->
       match gtk source with
@@ -115,7 +115,7 @@ let view sources = function
           `Error (false, Printf.sprintf "GTK plugin failed: %s\nHint: try --html=dir instead." msg)
 
 let parse_domain_id dom_name =
-  Plugin.load_gnttab_plugin "xen/mtv-xen-plugin.cma" >>= fun (module G : Plugin.GNTTAB) ->
+  Plugin.load_gnttab_plugin "xen/mirage_trace_viewer_xen.cma" >>= fun (module G : Plugin.GNTTAB) ->
   Xen_trace_source.domid_of_string dom_name >>= fun domid ->
   Xen_trace_source.connect domid >>= fun source ->
   let load () =

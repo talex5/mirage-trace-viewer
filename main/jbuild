@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(executable
+ ((name        main)
+  (public_name mirage_trace_viewer)
+  (libraries   (mirage-trace-viewer mirage-trace-viewer.js mirage-trace-viewer.plugin io-page-unix
+                xenstore_transport.unix xenstore.client xenstore.unix dynlink str))
+))

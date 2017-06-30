@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name        mirage_trace_viewer)
+  (public_name mirage-trace-viewer)
+  (wrapped     false)
+  (libraries   (itv-tree ocplib-endian.bigstring cmdliner))
+))

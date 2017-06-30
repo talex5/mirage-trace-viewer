@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name        mirage_trace_viewer_xen)
+  (public_name mirage-trace-viewer.xen)
+  (wrapped     false)
+  (libraries   (xen-gnt xen-gnt-unix io-page-xen mirage_trace_viewer mirage_trace_viewer_plugin))
+))

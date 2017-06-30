@@ -158,7 +158,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
   let render_now () =
     render_queued := false;
     let ctx = c##getContext(Dom_html._2d_) in
-    ctx##.font := Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
+    ctx##.font := Js.string (Printf.sprintf "%.0fpx Sans" Canvas.font_size);
     R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##.width, float_of_int c##.height));
     draw_controls ctx in
 

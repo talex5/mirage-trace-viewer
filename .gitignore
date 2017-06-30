@@ -1,5 +1,8 @@
+_build
+.merlin
 examples/*.bin
 setup.log
 setup.data
 example_html.byte
 examples/example_html.js
+*.install

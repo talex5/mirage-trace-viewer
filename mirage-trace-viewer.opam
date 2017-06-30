@@ -6,28 +6,24 @@ authors: "Thomas Leonard <talex5@gmail.com>"
 homepage: "https://github.com/talex5/mirage-trace-viewer"
 bug-reports: "https://github.com/talex5/mirage-trace-viewer"
 license: "BSD-2-Clause"
-build: [
-  ["./configure" "--prefix=%{prefix}%"
-    "--disable-xen"
-    "--enable-gtk"
-    "--enable-javascript"
-  ]
-  [make]
-]
-install: [make "install"]
-remove: ["ocamlfind" "remove" "mirage-trace-viewer"]
+build: ["jbuilder" "build" "-p" name "-j" jobs]
 depends: [
-  "ocamlfind" {build}
+  "jbuilder" {build}
   "itv-tree"
   "ocplib-endian"
   "cmdliner"
   "js_of_ocaml"
   "tyxml" {>= "4.0.0"}
+  "js_of_ocaml-tyxml"
+  "js_of_ocaml-lwt"
   "react"
   "reactiveData"
   "xen-gnt"
+  "xen-gnt-unix"
   "xenstore_transport"
   "lablgtk"
   "cairo2"
   "mirage-profile"
+  "io-page-unix"
+  "io-page-xen"
 ]

@@ -1,0 +1,9 @@
+(jbuild_version 1)
+
+(library
+ ((name        mirage_trace_viewer_js)
+  (public_name mirage-trace-viewer.js)
+  (preprocess  (pps (js_of_ocaml-ppx))) 
+  (wrapped     false)
+  (libraries   (mirage-trace-viewer js_of_ocaml js_of_ocaml-tyxml js_of_ocaml-lwt))
+))
