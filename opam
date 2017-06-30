@@ -26,8 +26,11 @@ depends: [
   "react"
   "reactiveData"
   "xen-gnt"
+  "xen-gnt-unix"
   "xenstore_transport"
   "lablgtk"
   "cairo2"
   "mirage-profile"
+  "io-page-unix"
+  "io-page-xen"
 ]

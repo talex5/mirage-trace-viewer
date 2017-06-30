@@ -9,7 +9,7 @@ Plugins:     META (0.4), DevFiles (0.4)
 BuildTools: ocamlbuild
 
 Flag xen
-  Description:        true to build support for tracing Xen guests (requires xen-gnt.unix)
+  Description:        true to build support for tracing Xen guests (requires xen-gnt-unix)
   Default:            false
 
 Flag gtk
@@ -40,7 +40,7 @@ Library "main"
   Path:           main
   Install:        false
   BuildTools:     ocamlbuild
-  BuildDepends:   mirage-trace-viewer,dynlink,xenstore.client,xenstore.unix,xenstore_transport.unix,threads,str,mirage-profile,io-page
+  BuildDepends:   mirage-trace-viewer,dynlink,xenstore.client,xenstore.unix,xenstore_transport.unix,threads,str,mirage-profile,io-page-unix,lwt.unix
   Modules:	  Plugin
   CompiledObject: best
 
@@ -58,7 +58,7 @@ Executable "mirage-trace-viewer"
   Path:	          main
   BuildTools:     ocamlbuild
   MainIs:         main.ml
-  BuildDepends:   main, io-page.unix
+  BuildDepends:   main, io-page-unix
   CompiledObject: best
   
 Library "mtv-xen-plugin"
@@ -68,5 +68,5 @@ Library "mtv-xen-plugin"
   FindlibParent:  mirage-trace-viewer
   FindlibName:    xen
   Modules:        Xen_plugin
-  BuildDepends:   xen-gnt,xen-gnt.unix, main, io-page.xen
+  BuildDepends:   xen-gnt,xen-gnt-unix, main, io-page-xen
   CompiledObject: best
