@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 4e0908e785abe7debeb512b4d163d982)
+# DO NOT EDIT (digest: d9f87c9feeccf75c22b49ac081d5ce5d)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -24,8 +24,9 @@ true: annot, bin_annot
 <js/*.ml{,i,y}>: pkg_cmdliner
 <js/*.ml{,i,y}>: pkg_itv-tree
 <js/*.ml{,i,y}>: pkg_js_of_ocaml
-<js/*.ml{,i,y}>: pkg_js_of_ocaml.syntax
-<js/*.ml{,i,y}>: pkg_js_of_ocaml.tyxml
+<js/*.ml{,i,y}>: pkg_js_of_ocaml-lwt
+<js/*.ml{,i,y}>: pkg_js_of_ocaml-ppx
+<js/*.ml{,i,y}>: pkg_js_of_ocaml-tyxml
 <js/*.ml{,i,y}>: pkg_ocplib-endian.bigstring
 <js/*.ml{,i,y}>: use_mirage-trace-viewer
 # Library main

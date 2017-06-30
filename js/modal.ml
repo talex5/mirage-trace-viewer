@@ -8,7 +8,7 @@ let inside elem child =
   let rec aux child =
     if elem == child then true
     else (
-      Js.Opt.case (child##parentNode)
+      Js.Opt.case child##.parentNode
         (fun () -> false)
         aux
     ) in
@@ -43,7 +43,7 @@ let () =
     match !current with
     | None -> Js._true
     | Some modal ->
-        Js.Opt.case (ev##target)
+        Js.Opt.case ev##.target
           (fun () -> Js._true)
           (fun target ->
             if target |> inside modal.element then (
@@ -58,7 +58,7 @@ let () =
           ) in
   let keyup ev =
     match !current with
-    | Some _ when ev##keyCode = keycode_escape ->
+    | Some _ when ev##.keyCode = keycode_escape ->
         close ();
         Dom_html.stopPropagation ev;
         Js._false

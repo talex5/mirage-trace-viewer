@@ -34,7 +34,7 @@ Library "js"
   FindlibParent:  mirage-trace-viewer
   FindlibName:    js
   Modules:        Html_viewer, Modal
-  BuildDepends:   mirage-trace-viewer,js_of_ocaml,js_of_ocaml.syntax,js_of_ocaml.tyxml
+  BuildDepends:   mirage-trace-viewer,js_of_ocaml,js_of_ocaml-ppx,js_of_ocaml-tyxml,js_of_ocaml-lwt
   
 Library "main"
   Path:           main
