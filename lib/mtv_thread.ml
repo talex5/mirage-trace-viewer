@@ -220,7 +220,7 @@ let of_events ?(simplify=true) events =
     | Creates (a, b, thread_type) ->
         let a = get_thread a in
         assert (not (Hashtbl.mem threads b));
-        let child = make_thread ~start_time:time ~tid:b ~thread_type:(String.lowercase thread_type) in
+        let child = make_thread ~start_time:time ~tid:b ~thread_type:(String.lowercase_ascii thread_type) in
         Hashtbl.add threads b child;
         a.creates <- child :: a.creates
     | Resolves (a, b, failure) ->
