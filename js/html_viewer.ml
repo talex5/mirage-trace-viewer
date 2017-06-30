@@ -3,7 +3,7 @@
 let auto_focus input =
   Lwt_js_events.async (fun () ->
     let elem = Tyxml_js.To_dom.of_input input in
-    elem##select ();
+    elem##select;
     Lwt.return ()
   )
 
@@ -24,38 +24,38 @@ module Canvas = struct
     y_advance : float;
   }
 
-  let set_line_width context width = context##lineWidth <- width
+  let set_line_width context width = context##.lineWidth := width
 
   let set_source_rgba (context:context) ~r ~g ~b ~a =
     let c = Printf.sprintf "#%02x%02x%02x"
       (r *. 255. |> truncate)
       (g *. 255. |> truncate)
       (b *. 255. |> truncate) |> Js.string in
-    context##globalAlpha <- a;
-    context##fillStyle <- c;
-    context##strokeStyle <- c
+    context##.globalAlpha := a;
+    context##.fillStyle := c;
+    context##.strokeStyle := c
 
   let set_source_alpha (context:context) ~r:_ ~g:_ ~b:_ a =
-    context##globalAlpha <- a
+    context##.globalAlpha := a
 
   let set_source_rgb (context:context) ~r ~g ~b = set_source_rgba context ~r ~g ~b ~a:1.0
 
-  let move_to context ~x ~y = context##moveTo (x, y)
-  let line_to context ~x ~y = context##lineTo (x, y)
-  let rectangle context ~x ~y ~w ~h = context##rect (x, y, w, h)
+  let move_to context ~x ~y = context##moveTo x y
+  let line_to context ~x ~y = context##lineTo x y
+  let rectangle context ~x ~y ~w ~h = context##rect x y w h
 
-  let stroke_preserve (context:context) = context##stroke ()
+  let stroke_preserve (context:context) = context##stroke
 
   let stroke (context:context) =
-    context##stroke ();
-    context##beginPath ()
+    context##stroke;
+    context##beginPath
 
   let fill (context:context) =
-    context##fill ();
-    context##beginPath ()
+    context##fill;
+    context##beginPath
 
   let text_extents (context:context) msg =
-    let width = (context##measureText (Js.string msg))##width in {
+    let width = (context##measureText (Js.string msg))##.width in {
       x_bearing = 0.0;
       y_bearing = -.font_size;
       width;
@@ -66,19 +66,19 @@ module Canvas = struct
 
   let paint_text (context:context) ?clip_area ~x ~y msg =
     match clip_area with
-    | None -> context##fillText (Js.string msg, x, y)
+    | None -> context##fillText (Js.string msg) x y
     | Some (w, h) ->
-        context##save ();
-        context##rect (x, y -. font_size, w, h +. font_size);
-        context##clip ();
-        context##fillText (Js.string msg, x, y);
-        context##restore ();
-        context##beginPath ()
+        context##save;
+        context##rect x (y -. font_size) w (h +. font_size);
+        context##clip;
+        context##fillText (Js.string msg) x y;
+        context##restore;
+        context##beginPath
 
   let paint ?alpha (context:context) =
-    let c = context##canvas in
+    let c = context##.canvas in
     assert (alpha = None);
-    context##fillRect (0., 0., float_of_int c##width, float_of_int c##height)
+    context##fillRect 0. 0. (float_of_int c##.width) (float_of_int c##.height)
 end
 
 module R = Mtv_render.Make(Canvas)
@@ -91,7 +91,7 @@ type touch =
 let resize_callbacks = ref []
 let () =
   let cb () = !resize_callbacks |> List.iter (fun f -> f ()) in
-  Js.Unsafe.global##resizeCanvasElements <- Js.wrap_callback cb
+  Js.Unsafe.global##.resizeCanvasElements := Js.wrap_callback cb
 
 let control_height = 16.
 
@@ -99,13 +99,13 @@ let control_height = 16.
 let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
   let modal =
     let div = Dom_html.createDiv Dom_html.document in
-    Js.Opt.iter (c##parentNode) (fun parent ->
-      parent##insertBefore ((div :> Dom.node Js.t), Js.Opt.return (c :> Dom.node Js.t)) |> ignore
+    Js.Opt.iter (c##.parentNode) (fun parent ->
+      parent##insertBefore (div :> Dom.node Js.t) (Js.Opt.return (c :> Dom.node Js.t)) |> ignore
     );
     div in
   let rel_event_coords ev =
     let (cx, cy) = Dom_html.elementClientPosition c in
-    (float_of_int (ev##clientX - cx), float_of_int (ev##clientY - cy)) in
+    (float_of_int (ev##.clientX - cx), float_of_int (ev##.clientY - cy)) in
 
   (* Return the size of the scroll thumb, the width of the scroll well and the
    * thumb start position. If the thumb would be too small, limit it and adjust
@@ -123,43 +123,43 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
 
   let draw_controls ctx =
     let top = Mtv_view.view_height v in
-    ctx##fillStyle <- Js.string "#888";
-    ctx##rect (0.0, top, Mtv_view.view_width v, control_height);
-    ctx##fill ();
-    ctx##beginPath ();
+    ctx##.fillStyle := Js.string "#888";
+    ctx##rect 0.0 top (Mtv_view.view_width v) control_height;
+    ctx##fill;
+    ctx##beginPath;
     (* Zoom *)
-    ctx##strokeStyle <- Js.string "#fff";
-    ctx##moveTo (34.0, top +. control_height /. 2.);
-    ctx##lineTo (62.0, top +. control_height /. 2.);
-    ctx##moveTo (66.0, top +. control_height /. 2.);
-    ctx##lineTo (94.0, top +. control_height /. 2.);
-    ctx##moveTo (80.0, top);
-    ctx##lineTo (80.0, Mtv_view.view_height v +. control_height);
-    ctx##stroke ();
-    ctx##beginPath ();
+    ctx##.strokeStyle := Js.string "#fff";
+    ctx##moveTo 34.0 (top +. control_height /. 2.);
+    ctx##lineTo 62.0 (top +. control_height /. 2.);
+    ctx##moveTo 66.0 (top +. control_height /. 2.);
+    ctx##lineTo 94.0 (top +. control_height /. 2.);
+    ctx##moveTo 80.0 top;
+    ctx##lineTo 80.0 (Mtv_view.view_height v +. control_height);
+    ctx##stroke;
+    ctx##beginPath;
     (* Hamburger *)
     let spacing = control_height /. 4.0 in
     for i = 1 to 3 do
       let y = top +. spacing *. float_of_int i in
-      ctx##moveTo (2.0, y);
-      ctx##lineTo (30.0, y);
+      ctx##moveTo 2.0 y;
+      ctx##lineTo 30.0 y;
     done;
-    ctx##stroke ();
-    ctx##beginPath ();
+    ctx##stroke;
+    ctx##beginPath;
     (* Scrollbar *)
     let xsize, _well_width, xstart = hscroll_values () in
-    ctx##fillStyle <- Js.string "#fff";
-    ctx##rect (xstart, top, xsize, control_height);
-    ctx##fill ();
-    ctx##beginPath ()
+    ctx##.fillStyle := Js.string "#fff";
+    ctx##rect xstart top xsize control_height;
+    ctx##fill;
+    ctx##beginPath
     in
 
   let render_queued = ref false in
   let render_now () =
     render_queued := false;
     let ctx = c##getContext(Dom_html._2d_) in
-    ctx##font <- Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
-    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##width, float_of_int c##height));
+    ctx##.font := Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
+    R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##.width, float_of_int c##.height));
     draw_controls ctx in
 
   let render () =
@@ -190,19 +190,19 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     let rec timeout _t =
       zoom factor;
       cancel_mouse_timeouts ();
-      mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 50.0)) in
+      mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout) 50.0) in
 
     zoom factor;
     cancel_mouse_timeouts ();
-    mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout, 500.0)) in
+    mouse_timeout := Some (Dom_html.window##setTimeout (Js.wrap_callback timeout) 500.0) in
 
   let show_side_panel () =
     let open Tyxml_js.Html5 in
     let input = Tyxml_js.Html5.input in
     let search ev =
-      Js.Opt.iter (ev##target) (fun entry ->
+      Js.Opt.iter ev##.target (fun entry ->
         Js.Opt.iter (Dom_html.CoerceTo.input entry) (fun entry ->
-          begin match entry##value |> Js.to_string with
+          begin match entry##.value |> Js.to_string with
           | "" -> Mtv_view.(set_highlights v ThreadSet.empty)
           | text ->
               let re = Regexp.regexp_string_case_fold text in
@@ -214,7 +214,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
       );
       true in
     let keyup ev =
-      if ev##keyCode = 13 then Modal.close ();
+      if ev##.keyCode = 13 then Modal.close ();
       true in
     let search_box = input ~a:[a_placeholder "Search"; a_name "search"; a_onkeyup keyup; a_oninput search] () in
     auto_focus search_box;
@@ -275,7 +275,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
         let x = x -. xsize /. 2. in
         let frac = (x -. 96.) /. well_width in
         Mtv_view.set_start_time v (Mtv_thread.start_time top_thread +. time_range *. frac) |> ignore;
-        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore in
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ())) 10.0 |> ignore in
 
       scroll_to_x x;
 
@@ -291,10 +291,10 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     ) in
 
   let resize () =
-    let view_width = c##clientWidth in
-    let view_height = c##clientHeight in
-    c##width <- view_width;
-    c##height <- view_height;
+    let view_width = c##.clientWidth in
+    let view_height = c##.clientHeight in
+    c##.width := view_width;
+    c##.height := view_height;
     let view_width = float_of_int view_width in
     let view_height = float_of_int view_height in
     Mtv_view.set_size v view_width (view_height -. control_height);
@@ -336,7 +336,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
         if time_at_pointer <> start_time || y_at_pointer <> start_y then (
           Mtv_view.set_start_time v (start_time -. Mtv_view.timespan_of_width v x) |> ignore;
           Mtv_view.set_view_y_so v start_y y |> ignore;
-          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ())) 10.0 |> ignore
         );
         Js._false in
 
@@ -350,7 +350,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     begin match Mtv_view.thread_at v ~x ~y with
     | Some thread ->
         Mtv_view.highlight_related v thread;
-        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ())) 10.0 |> ignore
     | None -> () end;
     let t_min = Mtv_view.view_start_time v in
     let t_max = t_min +. Mtv_view.timespan_of_width v (Mtv_view.view_width v) in
@@ -358,10 +358,10 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let touches ts =
-    let l = ts##length in
+    let l = ts##.length in
     let rec aux acc i =
       if i = l then List.rev acc else (
-      Js.Optdef.case (ts##item (i)) (fun () -> List.rev acc)
+      Js.Optdef.case (ts##item i) (fun () -> List.rev acc)
         (fun t -> aux (t :: acc) (i + 1))
       ) in
     aux [] 0 in
@@ -369,7 +369,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
   let touch = ref Touch_none in
   let touch_change (ev:Dom_html.touchEvent Js.t) =
     Dom.preventDefault ev;
-    begin match touches ev##touches with
+    begin match touches ev##.touches with
     | [t] ->
         let (x, y) = rel_event_coords t in
         if y >= Mtv_view.view_height v then control_click ~x
@@ -394,7 +394,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     Js._false in
 
   let touch_move (ev:Dom_html.touchEvent Js.t) =
-    begin match !touch, touches ev##touches with
+    begin match !touch, touches ev##.touches with
     | Touch_drag (start_time, start_y), [touch] ->
         let x_new, view_y_new = rel_event_coords touch in
         last_focal_x := x_new;
@@ -403,7 +403,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
         if t_new <> start_time || start_y <> y_new then (
           Mtv_view.set_start_time v (start_time -. Mtv_view.timespan_of_width v x_new) |> ignore;
           Mtv_view.set_view_y_so v start_y view_y_new |> ignore;
-          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+          Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ())) 10.0 |> ignore
           )
     | Touch_zoom (start_t0, start_t1), [touch0; touch1] ->
         let (x0, _) = rel_event_coords touch0 in
@@ -411,14 +411,14 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
         last_focal_x := x0;
         Mtv_view.set_start_time v (start_t0 -. Mtv_view.timespan_of_width v x0) |> ignore;
         Mtv_view.set_scale v ((x1 -. x0) /. (start_t1 -. start_t0));
-        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ()), 10.0) |> ignore
+        Dom_html.window##setTimeout (Js.wrap_callback (fun _ev -> render ())) 10.0 |> ignore
     | _ -> ()
     end;
     Js._false in
 
   let key_press ev =
     if Modal.is_open () then Js._true
-    else match Js.Optdef.map ev##charCode Char.chr |> Js.Optdef.to_option with
+    else match Js.Optdef.map ev##.charCode Char.chr |> Js.Optdef.to_option with
     | Some ' ' ->
         Mtv_view.set_show_metrics v (not (Mtv_view.show_metrics v));
         render ();
@@ -429,10 +429,10 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
     | _ -> Js._true in
 
   Dom_html.addMousewheelEventListener c zoom (Js.bool true) |> ignore;
-  c##ondblclick <- Dom_html.handler double_click;
-  c##onmousedown <- Dom_html.handler mouse_down;
-  c##onmouseup <- Dom_html.handler mouse_up;
-  c##onmouseout <- Dom_html.handler mouse_up;
+  c##.ondblclick := Dom_html.handler double_click;
+  c##.onmousedown := Dom_html.handler mouse_down;
+  c##.onmouseup := Dom_html.handler mouse_up;
+  c##.onmouseout := Dom_html.handler mouse_up;
 
   Dom_html.addEventListener c Dom_html.Event.touchstart (Dom_html.handler touch_change) (Js.bool true) |> ignore;
   Dom_html.addEventListener c Dom_html.Event.touchmove (Dom_html.handler touch_move) (Js.bool true) |> ignore;

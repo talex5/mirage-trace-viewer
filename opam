@@ -22,12 +22,18 @@ depends: [
   "ocplib-endian"
   "cmdliner"
   "js_of_ocaml"
+  "js_of_ocaml-ppx"
+  "js_of_ocaml-tyxml"
+  "js_of_ocaml-lwt"
   "tyxml" {>= "4.0.0"}
   "react"
   "reactiveData"
   "xen-gnt"
+  "xen-gnt-unix"
   "xenstore_transport"
   "lablgtk"
   "cairo2"
   "mirage-profile"
+  "io-page-unix"
+  "io-page-xen"
 ]
