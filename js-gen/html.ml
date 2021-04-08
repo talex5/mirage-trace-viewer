@@ -1,5 +1,7 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+open Mirage_trace_viewer
+
 let ( / ) = Filename.concat
 
 let error fmt =
@@ -44,9 +46,9 @@ let write_if_missing dir (name, contents) =
       try `Ok (open_out_gen [Open_creat; Open_binary; Open_wronly] 0o644 path)
       with Sys_error msg -> error "Open failed: %s" msg in
     ch >>= finally_do close_out (fun ch ->
-      output_string ch contents;
-      `Ok ()
-    )
+        output_string ch contents;
+        `Ok ()
+      )
   )
 
 let html : (_, _, _) format = "\
@@ -97,32 +99,38 @@ let write_to dir sources =
   if not (Sys.is_directory dir) then `Error (false, "Not a directory: " ^ dir)
   else (
     let loads = ref [] in
-    let bin_args = sources
-      |> List.mapi (fun i source ->
-        let vat = Plugin.load source |> Mtv_thread.of_events in
-        let name = Filename.basename source.Plugin.name in
-        let v = Mtv_view.make ~vat ~view_width:640. ~view_height:480. in
-        let bin_file = name ^ ".bin" in
-        let ch = open_out (dir / bin_file) in
-        Marshal.to_channel ch v [];
-        close_out ch;
-        let focus =
-          if i = 0 then "~grab_focus:true " else "" in
-        loads := Printf.sprintf "Html_viewer.load %s%S;" focus name :: !loads;
-        ["--file"; String.escaped bin_file]
-      )
+    let bin_args =
+      sources |> List.mapi (fun i (name, vat) ->
+          let name = Filename.basename name in
+          let v = Mtv_view.make ~vat ~view_width:640. ~view_height:480. in
+          let bin_file = name ^ ".bin" in
+          let ch = open_out (dir / bin_file) in
+          Marshal.to_channel ch v [];
+          close_out ch;
+          let focus =
+            if i = 0 then "~grab_focus:true " else "" in
+          loads := Printf.sprintf "Html_viewer.load %s%S;" focus name :: !loads;
+          ["--file"; String.escaped bin_file]
+        )
       |> List.concat in
     let skeleton_files = [
-      "_tags",
-        "true: warn(A), strict_sequence, package(mirage-trace-viewer.js)\n";
-      "Makefile", Printf.sprintf
+      "dune-project", "(lang dune 2.8)";
+      "dune",
+      Printf.sprintf
+        {|(executable
+            (name loader)
+            (modes byte)
+            (libraries mirage-trace-viewer-js.runtime))
+         |};
+      "Makefile",
+      Printf.sprintf
         "all:\
-        \n\tocamlbuild -use-ocamlfind loader.byte\
-        \n\tjs_of_ocaml --opt=3 +weak.js loader.byte -I . %s -o loader.js" (String.concat " " bin_args);
+         \n\tdune build --profile=release ./loader.bc\
+         \n\tjs_of_ocaml --opt=3 _build/default/loader.bc -I . %s -o loader.js" (String.concat " " bin_args);
       "loader.ml",
-        "let () =\n  " ^ String.concat "\n  " !loads ^ "\n";
+      "let () =\n  " ^ String.concat "\n  " !loads ^ "\n";
       "trace.html",
-        Printf.sprintf html (Filename.basename (List.hd sources).Plugin.name)
+      Printf.sprintf html (Filename.basename (fst (List.hd sources)))
     ] in
     skeleton_files |> iter_s (write_if_missing dir) >>= fun () ->
     run ["make"; "-C"; dir]

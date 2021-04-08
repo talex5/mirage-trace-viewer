@@ -1,15 +1,20 @@
-Viewer for traces collected by [mirage-profile][].
+Viewer for CTF traces collected by [mirage-profile][].
 
-There are three optional features here:
+To view a trace in a window using the GTK interface:
 
-* A native GTK viewer (`./configure --enable-gtk`)
-* A JavaScript HTML 5 canvas viewer (`./configure --enable-javascript`)
-* Support for collecting trace data from a Xen guest (`./configure --enable-xen`)
+```bash
+mirage-trace-viewer-gtk ./examples/net.ctf
+```
 
-For pre-compiled binaries, see <http://talex5.github.io/mirage-trace-viewer/mtv.xml>.
+To generate a JavaScript viewer in the directory `htdocs`:
 
-Run `mirage-trace-viewer --help` for instructions.
+```bash
+mirage-trace-viewer-js --out=./htdocs ./examples/net.ctf
+```
+
+To dump a trace from a running Xen domain, use [mirage-trace-dump-xen][].
 
 Examples can be found in the blog post [Visualising an Asynchronous Monad](http://roscidus.com/blog/blog/2014/10/27/visualising-an-asynchronous-monad/).
 
 [mirage-profile]: https://github.com/mirage/mirage-profile
+[mirage-trace-dump-xen]: https://github.com/talex5/mirage-trace-dump-xen

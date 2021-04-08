@@ -1,0 +1,5 @@
+(library
+  (name html_viewer)
+  (public_name "mirage-trace-viewer-js.runtime")
+  (preprocess (pps js_of_ocaml-ppx))
+  (libraries mirage-trace-viewer js_of_ocaml js_of_ocaml-ppx js_of_ocaml-tyxml js_of_ocaml-lwt))

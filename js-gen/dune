@@ -1,0 +1,5 @@
+(executable
+  (name main)
+  (public_name mirage-trace-viewer-js)
+  (package mirage-trace-viewer-js)
+  (libraries mirage-trace-viewer mirage-trace-viewer.unix js_of_ocaml js_of_ocaml-ppx js_of_ocaml-tyxml js_of_ocaml-lwt))

@@ -1,0 +1,4 @@
+(library
+  (name mtv_unix)
+  (public_name mirage-trace-viewer.unix)
+  (libraries unix cmdliner))

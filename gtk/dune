@@ -1,0 +1,5 @@
+(executable
+  (name main)
+  (public_name mirage-trace-viewer-gtk)
+  (package mirage-trace-viewer-gtk)
+  (libraries mirage-trace-viewer mirage-trace-viewer.unix lablgtk2 cairo2-gtk cairo2 lwt lwt.unix str))

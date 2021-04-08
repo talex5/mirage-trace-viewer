@@ -1,6 +1,6 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
-[@@@ocaml.warning "-48"]   (* "implicit elimination of optional arguments" - lablgtk uses this a lot *)
+open Mirage_trace_viewer
 
 let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
   ignore (signal ~callback)
@@ -123,12 +123,11 @@ module Menu = struct
     t.menu#popup ~button:(GdkEvent.Button.button bev) ~time:(GdkEvent.Button.time bev)
 end
 
-let make source =
-  let vat = Plugin.load source |> Mtv_thread.of_events in
+let make ~name vat =
   let top_thread = Mtv_thread.top_thread vat in
   let title = Printf.sprintf "%s (%s) - Mirage Trace Viewer"
-    (Filename.basename source.Plugin.name)
-    (Filename.dirname source.Plugin.name) in
+    (Filename.basename name)
+    (Filename.dirname name) in
   let win = GWindow.window ~title () in
   win#set_default_size
     ~width:(Gdk.Screen.width () / 2)
@@ -152,7 +151,7 @@ let make source =
   GMisc.label ~packing:minibuffer#pack ~text:"Search: " () |> ignore_widget;
   let search_entry = GEdit.entry ~packing:(minibuffer#pack ~expand:true) () in
 
-  win#event#connect#delete ==> (fun _ev -> GMain.Main.quit (); true);
+  win#event#connect#delete ==> (fun _ev -> win#destroy (); true);
   win#add_accel_group accel_group;
   win#show ();
 
@@ -289,14 +288,6 @@ let make source =
   vadjustment#connect#value_changed ==> (fun () ->
     set_view_y vadjustment#value;
     GtkBase.Widget.queue_draw area#as_widget
-  )
+    );
 
-let () =
-  let run_plugin sources =
-    try
-      GMain.init () |> ignore;
-      sources |> List.iter make;
-      GMain.Main.main ();
-      `Ok ()
-    with Gtk.Error msg -> `Error msg in
-  Plugin.register_output run_plugin
+  win

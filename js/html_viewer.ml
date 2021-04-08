@@ -1,5 +1,6 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+open Mirage_trace_viewer
 open Js_of_ocaml
 open Js_of_ocaml_lwt
 open Js_of_ocaml_tyxml
@@ -162,7 +163,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
   let render_now () =
     render_queued := false;
     let ctx = c##getContext(Dom_html._2d_) in
-    ctx##.font := Js.string (Printf.sprintf "%.fpx Sans" Canvas.font_size);
+    ctx##.font := Js.string (Printf.sprintf "%.0fpx Sans" Canvas.font_size);
     R.render v ctx ~expose_area:((0.0, 0.0), (float_of_int c##.width, float_of_int c##.height));
     draw_controls ctx in
 
@@ -238,7 +239,7 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
         li [
           label [
             input ~a:(a_input_type `Checkbox :: a_onchange toggle_metric :: checked) ();
-            pcdata c.Mtv_counter.name
+            txt c.Mtv_counter.name
           ]
         ]
       ) in
@@ -250,11 +251,11 @@ let attach ?(grab_focus=false) (c:Dom_html.canvasElement Js.t) v =
           div [
             label [
               input ~a:(a_input_type `Checkbox :: a_name "show_metrics" :: a_onchange set_show_metrics :: show_metrics_attrs) ();
-              pcdata "Show metrics"];
+              txt "Show metrics"];
           ];
           ul ~a:[a_class ["metrics"]] metric_toggles;
           hr ();
-          button ~a:[a_onclick (fun _ev -> Modal.close (); false)] [pcdata "Close"]
+          button ~a:[a_onclick (fun _ev -> Modal.close (); false)] [txt "Close"]
         ]
       ]
     ) in

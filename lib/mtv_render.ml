@@ -147,10 +147,10 @@ module Make (C : CANVAS) = struct
     draw grid_start_x;
     C.set_source_rgb cr ~r:0.4 ~g:0.4 ~b:0.4;
     let msg =
-      if grid_step >= 1.0 then Printf.sprintf "Each grid division: %.f s" grid_step
-      else if grid_step >= 0.001 then Printf.sprintf "Each grid division: %.f ms" (grid_step *. 1000.)
-      else if grid_step >= 0.000_001 then Printf.sprintf "Each grid division: %.f us" (grid_step *. 1_000_000.)
-      else if grid_step >= 0.000_000_001 then Printf.sprintf "Each grid division: %.f ns" (grid_step *. 1_000_000_000.)
+      if grid_step >= 1.0 then Printf.sprintf "Each grid division: %.0f s" grid_step
+      else if grid_step >= 0.001 then Printf.sprintf "Each grid division: %.0f ms" (grid_step *. 1000.)
+      else if grid_step >= 0.000_001 then Printf.sprintf "Each grid division: %.0f us" (grid_step *. 1_000_000.)
+      else if grid_step >= 0.000_000_001 then Printf.sprintf "Each grid division: %.0f ns" (grid_step *. 1_000_000_000.)
       else Printf.sprintf "Each grid division: %.2g s" grid_step in
     let extents = C.text_extents cr msg in
     let y = bottom -. C.(extents.height +. extents.y_bearing) -. 2.0 in
