@@ -1,5 +1,7 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+open Js_of_ocaml
+
 val attach : ?grab_focus:bool -> Dom_html.canvasElement Js.t -> Mtv_view.t -> unit
 (** [attach canvas view] renders the view to the canvas and attaches event handlers
  * to respond to events. *)

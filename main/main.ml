@@ -1,5 +1,7 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+[@@@ocaml.warning "-44"]
+
 open Cmdliner
 
 let ( >>= ) x fn =
@@ -32,7 +34,7 @@ let output_method =
 
 let copy src dst =
   let len = 4096 in
-  let buf = String.make len ' ' in
+  let buf = Bytes.make len ' ' in
   let rec aux () =
     match input src buf 0 len with
     | 0 -> ()
@@ -62,7 +64,10 @@ let parse_trace_filename trace_file =
     let open Bigarray in
     let fd = open_trace_file trace_file in
     let size = Unix.((fstat fd).st_size) in
-    let ba = Array1.map_file fd char c_layout false size in
+    let ba =
+      Unix.map_file fd char c_layout false [| size |]
+      |> Bigarray.array1_of_genarray
+    in
     Unix.close fd;
     ba in
   `Ok {Plugin.load; name = trace_file}
@@ -97,7 +102,10 @@ let save_as path sources =
           let fd = Unix.(openfile path [O_RDWR; O_CREAT; O_TRUNC; O_CLOEXEC] 0o644) in
           let size = Array1.dim src in
           Unix.ftruncate fd size;
-          let dst = Array1.map_file fd char c_layout true size in
+          let dst =
+            Unix.map_file fd char c_layout true [| size |]
+            |> Bigarray.array1_of_genarray
+          in
           Array1.blit src dst;
           Unix.close fd end;
       `Ok ()

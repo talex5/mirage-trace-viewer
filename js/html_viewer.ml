@@ -1,5 +1,9 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+open Js_of_ocaml
+open Js_of_ocaml_lwt
+open Js_of_ocaml_tyxml
+
 let auto_focus input =
   Lwt_js_events.async (fun () ->
     let elem = Tyxml_js.To_dom.of_input input in
@@ -8,7 +12,7 @@ let auto_focus input =
   )
 
 let focus elem =
-  (Js.Unsafe.coerce elem)##focus ()
+  elem##focus
 
 module Canvas = struct
   type context = Dom_html.canvasRenderingContext2D Js.t

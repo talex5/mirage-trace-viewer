@@ -1,6 +1,8 @@
 (* Copyright (C) 2015, Thomas Leonard
  * See the README file for details. *)
 
+open Js_of_ocaml
+
 let ignore_listener : Dom_html.event_listener_id -> unit = ignore
 
 let inside elem child =

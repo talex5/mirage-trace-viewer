@@ -934,12 +934,13 @@ let my_dispatch conf =
   dispatch_default conf;
   match conf with
   | After_rules ->
-      begin match get_dir "lablgtk2", get_dir "cairo2" with
-      | Some gtk_dir, Some cairo_dir ->
+      begin match get_dir "lablgtk2", get_dir "cairo2", get_dir "cairo2-gtk" with
+      | Some gtk_dir, Some cairo_dir, Some cairo_gtk_dir ->
           let add_link_gtk target =
             flag ["library"; target.tag; "link_gtk"] (S [
               links ~target gtk_dir ["lablgtk"];
-              links ~target cairo_dir ["cairo2"; "cairo_gtk"];
+              links ~target cairo_dir ["cairo"];
+              links ~target cairo_gtk_dir ["cairo_gtk"];
             ]) in
           add_link_gtk native;
           add_link_gtk byte;

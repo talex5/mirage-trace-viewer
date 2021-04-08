@@ -50,7 +50,7 @@ Library "mtv-gtk-plugin"
   FindlibName:    gtk
   Build$:         flag(gtk)
   Install$:       flag(gtk)
-  BuildDepends:   lablgtk2,cairo2.lablgtk2,cairo2,main
+  BuildDepends:   lablgtk2,cairo2-gtk,cairo2,main
   Modules:	  Gtk_viewer
   CompiledObject: best
 

@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 99b93ba830a3d77d7894867259667d44)
+# DO NOT EDIT (digest: 64883612c4ee4f82b5733eb05e9a3572)
 version = "0.1"
 description = "Graphical viewer of Lwt trace logs"
 requires = "itv-tree ocplib-endian.bigstring cmdliner"
@@ -34,7 +34,7 @@ package "js" (
 package "gtk" (
  version = "0.1"
  description = "Graphical viewer of Lwt trace logs"
- requires = "lablgtk2 cairo2.lablgtk2 cairo2 main"
+ requires = "lablgtk2 cairo2-gtk cairo2 main"
  archive(byte) = "mtv-gtk-plugin.cma"
  archive(byte, plugin) = "mtv-gtk-plugin.cma"
  archive(native) = "mtv-gtk-plugin.cmxa"

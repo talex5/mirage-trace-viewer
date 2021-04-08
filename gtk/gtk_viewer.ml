@@ -1,10 +1,16 @@
 (* Copyright (C) 2014, Thomas Leonard *)
 
+[@@@ocaml.warning "-48"]   (* "implicit elimination of optional arguments" - lablgtk uses this a lot *)
+
 let (==>) (signal:(callback:_ -> GtkSignal.id)) callback =
   ignore (signal ~callback)
 
 module Canvas = struct
   include Cairo
+
+  let move_to cr ~x ~y = move_to cr x y
+  let line_to cr ~x ~y = line_to cr x y
+  let rectangle cr ~x ~y ~w ~h = rectangle cr x y ~w ~h
 
   let paint_text cr ?clip_area ~x ~y msg =
     match clip_area with
@@ -19,16 +25,18 @@ module Canvas = struct
         show_text cr msg;
         restore cr
 
-  let set_source_alpha cr ~r ~g ~b a = set_source_rgba cr ~r ~g ~b ~a
+  let set_source_rgb cr ~r ~g ~b = set_source_rgb cr r g b
+  let set_source_alpha cr ~r ~g ~b a = set_source_rgba cr r g b a
+  let set_source_rgba cr ~r ~g ~b ~a = set_source_rgba cr r g b a
 end
 
 module R = Mtv_render.Make(Canvas)
 
 let export_as_svg v fname =
   let surface = Cairo.SVG.create
-    ~fname
-    ~width:(Mtv_view.view_width v)
-    ~height:(Mtv_view.view_height v) in
+    fname
+    ~w:(Mtv_view.view_width v)
+    ~h:(Mtv_view.view_height v) in
   let cr = Cairo.create surface in
   Cairo.set_font_size cr 12.;
   Cairo.select_font_face cr "Sans";
@@ -37,7 +45,7 @@ let export_as_svg v fname =
   (* Note: bounds are slightly smaller than the page because otherwise Cairo
    * optimises the clip region out (but Inkscape displays things beyond the
    * page boundaries). *)
-  Cairo.rectangle cr ~x:1.0 ~y:0.0 ~w:(Mtv_view.view_width v -. 2.0) ~h:(Mtv_view.view_height v);
+  Cairo.rectangle cr 1.0 0.0 ~w:(Mtv_view.view_width v -. 2.0) ~h:(Mtv_view.view_height v);
   Cairo.clip cr;
 
   R.render v cr ~expose_area:(
