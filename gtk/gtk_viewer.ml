@@ -206,7 +206,7 @@ let make ~name vat =
 
   area#event#connect#expose ==> (fun ev ->
     let cr = Cairo_gtk.create area#misc#window in
-    Cairo.set_font_size cr 12.;
+    Cairo.set_font_size cr 16.;
     Cairo.select_font_face cr "Sans";
     Cairo.set_line_join cr Cairo.JOIN_BEVEL;
 
