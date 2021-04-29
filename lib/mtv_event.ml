@@ -2,7 +2,7 @@ let printf = Printf.printf
 
 type thread = int
 
-type read_outcome = Read_resolved | Read_sleeping
+type read_outcome = Read_resolved | Read_resolved_later | Read_sleeping
 
 type op = 
   | Creates of thread * thread * string

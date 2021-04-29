@@ -250,6 +250,14 @@ let of_events ?(simplify=true) events =
           | (_, Try_read, b2) :: rest when b == b2 -> rest  (* Simplify *)
           | all -> all in
         a.interactions <- (time, Read, b) :: interactions;
+    | Reads (a, b, Read_resolved_later) ->
+        let a = get_thread a in
+        let b = get_thread b in
+        let interactions =
+          match a.interactions with
+          | (_, Try_read, b2) :: rest when b == b2 -> rest  (* Simplify *)
+          | all -> all in
+        a.interactions <- (time, Read, b) :: interactions;
     | Reads (a, b, Read_sleeping) ->
         let a = get_thread a in
         let b = get_thread b in
