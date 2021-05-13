@@ -263,10 +263,15 @@ let of_events ?(simplify=true) events =
         let b = get_thread b in
         a.interactions <- (time, Try_read, b) :: a.interactions;
         b.last_signalled_or_checked <- time;
-    | Signals (a, b) ->
+    | Signals_and_switches (a, b) ->
         let a = get_thread a in
         let b = get_thread b in
         switch time (Some b);
+        a.interactions <- (time, Signal, b) :: a.interactions;
+        b.last_signalled_or_checked <- time;
+    | Signals (a, b) ->
+        let a = get_thread a in
+        let b = get_thread b in
         a.interactions <- (time, Signal, b) :: a.interactions;
         b.last_signalled_or_checked <- time;
     | Label (a, "__should_resolve") ->

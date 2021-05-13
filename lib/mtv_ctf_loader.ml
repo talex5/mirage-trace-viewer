@@ -22,6 +22,8 @@ let thread_type_of_int = function
   | 13 -> "Ignore_result"
   | 14 -> "Async"
   | 15 -> "Promise"
+  | 16 -> "Semaphore"
+  | 17 -> "Switch"
   | x -> Printf.eprintf "Warning: unknown thread type '%d'\n%!" x; "Unknown"
 
 let uuid = "\x05\x88\x3b\x8d\x52\x1a\x48\x7b\xb3\x97\x45\x6a\xb1\x50\x68\x0c"
@@ -157,7 +159,7 @@ let from_bigarray stream_data =
           | 9 ->
               let recv = read_thread () in
               let sender = read_thread () in
-              Signals (sender, recv)
+              Signals_and_switches (sender, recv)
           | 10 ->
               let reader = read_thread () in
               let input = read_thread () in
@@ -171,6 +173,10 @@ let from_bigarray stream_data =
               let reader = read_thread () in
               let input = read_thread () in
               Reads (reader, input, Read_resolved_later)
+          | 13 ->
+              let recv = read_thread () in
+              let sender = read_thread () in
+              Signals (sender, recv)
           | x -> error "Unknown event op %d" x in
         let event = {
           time = Int64.to_float time /. 1_000_000_000.;

@@ -14,6 +14,7 @@ type op =
   | Gc of float
   | Increases of thread * string * int    (* Deprecated; use Counter_value instead *)
   | Counter_value of thread * string * int
+  | Signals_and_switches of thread * thread
   | Signals of thread * thread
 
 type t = {
