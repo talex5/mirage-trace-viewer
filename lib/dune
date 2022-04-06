@@ -1,4 +1,4 @@
 (library
   (name mirage_trace_viewer)
   (public_name mirage-trace-viewer)
-  (libraries itv-tree ocplib-endian.bigstring))
+  (libraries itv-tree ocplib-endian.bigstring unix))

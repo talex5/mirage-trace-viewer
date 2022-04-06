@@ -26,9 +26,8 @@ let () =
     `P "$(tname) views trace data from a file.";
     `P "mirage-trace-viewer-gtk trace.ctf";
   ] in
-  let info = Term.info ~doc ~man "mirage-trace-viewer-gtk" in
-  let term = Term.(ret (pure main $ Mtv_unix.trace_files)) in
-  match Term.eval (term, info) with
-  | `Ok () -> ()
-  | `Version | `Help -> ()
-  | `Error _ -> exit 1
+  let info = Cmd.info ~doc ~man "mirage-trace-viewer-gtk" in
+  let term = Term.(ret (const main $ Mtv_unix.trace_files)) in
+  match Cmd.eval (Cmd.v info term) with
+  | 0 -> ()
+  | _ -> exit 1
