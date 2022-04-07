@@ -28,6 +28,4 @@ let () =
   ] in
   let info = Cmd.info ~doc ~man "mirage-trace-viewer-gtk" in
   let term = Term.(ret (const main $ Mtv_unix.trace_files)) in
-  match Cmd.eval (Cmd.v info term) with
-  | 0 -> ()
-  | _ -> exit 1
+  exit @@ Cmd.eval (Cmd.v info term)
