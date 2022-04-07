@@ -192,10 +192,3 @@ let from_bigarray stream_data =
         (Printexc.to_string ex)
   );
   List.rev !events
-
-let from_channel ch =
-  let fd = Unix.descr_of_in_channel ch in
-  let size = Unix.((fstat fd).st_size) in
-  Unix.map_file fd char c_layout false [| size |]
-  |> Bigarray.array1_of_genarray
-  |> from_bigarray
