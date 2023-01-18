@@ -40,7 +40,7 @@ let parse_trace_filename trace_file =
   | "-" -> `Ok "-"
   | trace_file -> fst Arg.non_dir_file trace_file
 
-let input_file : (_ Arg.converter) = (parse_trace_filename, Format.pp_print_string)
+let input_file : (_ Arg.conv) = (parse_trace_filename, Format.pp_print_string)
 
 let trace_files =
   let doc = "The CTF-format trace file from which to load the trace data." in
