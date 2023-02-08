@@ -1,0 +1,4 @@
+(library
+ (name mirage_trace_viewer_eio)
+ (public_name mirage-trace-viewer.eio)
+ (libraries runtime_events eio mirage-trace-viewer))

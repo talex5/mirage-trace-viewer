@@ -4,14 +4,16 @@ type thread = int
 
 type read_outcome = Read_resolved | Read_resolved_later | Read_sleeping
 
-type op = 
+type gc_kind = Minor | Major | Unknown
+
+type op =
   | Creates of thread * thread * string
   | Reads of thread * thread * read_outcome
   | Resolves of thread * thread * string option
   | Becomes of thread * thread
   | Label of thread * string
   | Switch of thread
-  | Gc of float
+  | Gc of float * gc_kind
   | Increases of thread * string * int    (* Deprecated; use Counter_value instead *)
   | Counter_value of thread * string * int
   | Signals_and_switches of thread * thread
