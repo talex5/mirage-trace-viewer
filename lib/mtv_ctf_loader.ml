@@ -155,7 +155,7 @@ let from_bigarray stream_data =
               Switch thread
           | 8 ->
               let duration = read64 () in
-              Gc (Int64.to_float duration /. 1_000_000_000.)
+              Gc (Int64.to_float duration /. 1_000_000_000., Unknown)
           | 9 ->
               let recv = read_thread () in
               let sender = read_thread () in

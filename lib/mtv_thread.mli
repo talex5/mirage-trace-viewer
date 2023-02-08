@@ -10,7 +10,7 @@ type time = float
 type interaction = Resolve | Read | Try_read | Signal
 
 val top_thread : vat -> t
-val gc_periods : vat -> (time * time) list
+val gc_periods : vat -> (time * time * Mtv_event.gc_kind) list
 
 val thread_type : t -> string
 

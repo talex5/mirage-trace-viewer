@@ -34,7 +34,7 @@ type mutable_counter = {
 
 type vat = {
   top_thread : t;
-  mutable gc : (time * time) list;
+  mutable gc : (time * time * Mtv_event.gc_kind) list;
   mutable counters : Mtv_counter.t list;
 }
 
@@ -284,8 +284,8 @@ let of_events ?(simplify=true) events =
         )
     | Switch a ->
         switch time (Some (get_thread a))
-    | Gc duration ->
-        vat.gc <- (time -. duration, time) :: vat.gc
+    | Gc (duration, kind) ->
+        vat.gc <- (time -. duration, time, kind) :: vat.gc
     | Increases (a, counter, amount) ->
         let c = get_counter counter in
         let new_value = counter_value c + amount in

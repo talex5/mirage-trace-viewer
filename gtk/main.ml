@@ -5,8 +5,9 @@ open Mirage_trace_viewer
 let main paths =
   try
     GMain.init () |> ignore;
-    paths |> List.iter (fun path ->
-        let vat = Mtv_unix.load path |> Mtv_ctf_loader.from_bigarray |> Mtv_thread.of_events in
+    paths |> List.iter (fun (path : Mtv_unix.source) ->
+        let events = Mirage_trace_viewer_eio.load_runtime_events (path :> string) in
+        let vat = events |> Mtv_thread.of_events in
         let win = Gtk_viewer.make ~name:(path :> string) vat in
         ignore (win#connect#destroy ~callback:(fun _ ->
             (* todo: only quit when last window is closed *)

@@ -3,7 +3,7 @@
 module type CANVAS = sig
   type context
   type text_extents = {
-    x_bearing : float; 
+    x_bearing : float;
     y_bearing : float;
     width : float;
     height : float;
@@ -184,7 +184,7 @@ module Make (C : CANVAS) = struct
 
   let rec draw_labels cr ~v ~y ~min_x ~max_x = function
     | [] -> ()
-    | [(time, msg)] -> 
+    | [(time, msg)] ->
         let x = Mtv_view.clip_x_of_time v time in
         let _end : float = draw_label cr ~v ~y ~min_x ~max_x x msg in
         draw_mark cr x y;
@@ -221,13 +221,18 @@ module Make (C : CANVAS) = struct
     );
 
     C.set_source_rgb cr ~r:0.7 ~g:0.6 ~b:0.6;
-    Mtv_thread.gc_periods vat |> List.iter (fun (start_time, end_time) ->
+    Mtv_thread.gc_periods vat |> List.iter (fun (start_time, end_time, gc_kind) ->
       let start_x = Mtv_view.clip_x_of_time v start_time in
       let end_x = Mtv_view.clip_x_of_time v end_time in
       if end_x >= expose_min_x && start_x < expose_max_x then (
         C.rectangle cr ~x:start_x ~y:expose_min_y ~w:(end_x -. start_x) ~h:expose_max_y;
         C.fill cr;
-        if end_x -. start_x > 16. then region_labels := (start_x, end_x, "GC") :: !region_labels
+        let label = match gc_kind with
+          | Mtv_event.Minor -> "GC minor"
+          | Major -> "GC major"
+          | Unknown -> "GC"
+        in
+        if end_x -. start_x > 16. then region_labels := (start_x, end_x, label) :: !region_labels
       )
     );
 
